@@ -3,3 +3,10 @@
 .filterBar{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 12px}
 .filterBtn{white-space:nowrap;background:white!important;color:#6f5140!important;border:1px solid var(--line)!important;padding:8px 12px!important;display:flex;align-items:center;gap:5px}
 .filterBtn.active{background:var(--brown)!important;color:white!important}
+
+.catActionsTop{display:flex;gap:8px;align-items:center}
+.filterToggle{background:white!important;color:#6f5140!important;border:1px solid var(--line)!important;padding:9px 12px!important}
+.filterPanel{display:none;margin:0 0 8px}
+.filterPanel.open{display:block}
+.colorChoice.multiActive{background:var(--brown)!important;color:white!important}
+.filterBtn .colorDot{margin-right:0}

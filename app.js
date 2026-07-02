@@ -39,22 +39,30 @@ let categories=[];
 let items=[];
 let selected={tops:null,bottoms:null,shoes:null,bags:null};
 let currentModalItem=null;
-let modalColor='';
+let modalColorsList=[];
 let modalSeason='';
 let colorFilters={};
+let openFilterPanels={};
 
 function safeGet(id){return document.getElementById(id)}
 
 function loadCategories(){
-  try{
-    const saved=localStorage.getItem('ecloset_categories_fix');
-    if(saved)return JSON.parse(saved);
-  }catch(e){}
+  const keys=['ecloset_categories_master','ecloset_categories_fix','ecloset_categories_1','ecloset_categories_v34'];
+  for(const key of keys){
+    try{
+      const saved=localStorage.getItem(key);
+      if(saved){
+        const parsed=JSON.parse(saved);
+        localStorage.setItem('ecloset_categories_master',JSON.stringify(parsed));
+        return parsed;
+      }
+    }catch(e){}
+  }
   return DEFAULT_CATEGORIES.map(c=>({...c}));
 }
 
 function saveCategories(){
-  localStorage.setItem('ecloset_categories_fix',JSON.stringify(categories));
+  localStorage.setItem('ecloset_categories_master',JSON.stringify(categories));
 }
 
 function loadColorFilters(){
@@ -250,7 +258,7 @@ async function saveModalItem(){
     await api('/rest/v1/clothing?id=eq.'+currentModalItem.id,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,color:modalColor,season:modalSeason,favorite})
+      body:JSON.stringify({name,color:colorString(modalColorsList),season:modalSeason,favorite})
     });
     closePhotoModal();
     await loadCloud();
@@ -279,12 +287,22 @@ function pick(category){safeGet('file-'+category)?.click()}
 function itemsFor(category){
   let list=items.filter(item=>(item.category||'tops')===category);
   const active=colorFilters[category];
-  if(active)list=list.filter(item=>(item.color||'')===active);
+  if(active)list=list.filter(item=>normalizeColors(item.color).includes(active));
   return list;
 }
 
 function allItemsFor(category){
   return items.filter(item=>(item.category||'tops')===category);
+}
+
+function normalizeColors(value){
+  if(Array.isArray(value))return value.filter(Boolean);
+  if(!value)return [];
+  return String(value).split(',').map(x=>x.trim()).filter(Boolean);
+}
+
+function colorString(list){
+  return normalizeColors(list).join(',');
 }
 
 function colorHex(id){
@@ -325,12 +343,12 @@ function createCard(item,selectable=false){
   const badges=document.createElement('div');
   badges.className='itemBadges';
 
-  if(item.color){
+  normalizeColors(item.color).forEach(c=>{
     const dot=document.createElement('span');
     dot.className='itemDot';
-    dot.style.background=colorHex(item.color);
+    dot.style.background=colorHex(c);
     badges.appendChild(dot);
-  }
+  });
 
   if(item.season){
     const season=document.createElement('span');
@@ -376,6 +394,8 @@ function renderStats(){
 
 function createColorFilter(category){
   const wrap=document.createElement('div');
+  wrap.className='filterPanel '+(openFilterPanels[category]?'open':'');
+  wrap.id='filter-'+category;
 
   const title=document.createElement('div');
   title.className='filterTitle';
@@ -429,9 +449,22 @@ function renderCloset(){
     const left=document.createElement('div');
     left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' zichtbaar • '+allItemsFor(cat.id).length+' totaal</div>';
 
+    const actions=document.createElement('div');
+    actions.className='catActionsTop';
+
+    const filterBtn=document.createElement('button');
+    filterBtn.className='filterToggle';
+    filterBtn.textContent=colorFilters[cat.id] ? 'Filter actief' : 'Filter';
+    filterBtn.onclick=()=>{
+      openFilterPanels[cat.id]=!openFilterPanels[cat.id];
+      renderAll();
+    };
+
     const btn=document.createElement('button');
     btn.textContent='Foto toevoegen';
     btn.onclick=()=>pick(cat.id);
+
+    actions.append(filterBtn,btn);
 
     const input=document.createElement('input');
     input.type='file';
@@ -443,7 +476,7 @@ function renderCloset(){
       e.target.value='';
     };
 
-    top.append(left,btn);
+    top.append(left,actions);
     block.append(top,input,createColorFilter(cat.id),createRow(cat.id,false,true));
     container.appendChild(block);
   });
@@ -536,7 +569,7 @@ function renderCategories(){
 
 function openPhotoModal(item){
   currentModalItem=item;
-  modalColor=item.color||'';
+  modalColorsList=normalizeColors(item.color);
   modalSeason=item.season||'';
 
   safeGet('modalImg').src=item.image_url;
@@ -560,13 +593,21 @@ function renderModalColors(){
   box.innerHTML='';
   COLORS.forEach(color=>{
     const b=document.createElement('button');
-    b.className='colorChoice '+(modalColor===color.id?'active':'');
+    const active=modalColorsList.includes(color.id);
+    b.className='colorChoice '+(active?'multiActive':'');
     const dot=document.createElement('span');
     dot.className='colorDot';
     dot.style.background=color.hex;
     b.appendChild(dot);
     b.append(color.label);
-    b.onclick=()=>{modalColor=color.id;renderModalColors()};
+    b.onclick=()=>{
+      if(modalColorsList.includes(color.id)){
+        modalColorsList=modalColorsList.filter(x=>x!==color.id);
+      }else{
+        modalColorsList.push(color.id);
+      }
+      renderModalColors();
+    };
     box.appendChild(b);
   });
 }
