@@ -106,19 +106,49 @@ function detectColorFromFile(file){
       const img=new Image();
       img.onload=()=>{
         const canvas=document.createElement('canvas');
-        const size=80;
-        canvas.width=size; canvas.height=size;
+        const size=120;
+        canvas.width=size;
+        canvas.height=size;
         const ctx=canvas.getContext('2d');
         ctx.drawImage(img,0,0,size,size);
-        const data=ctx.getImageData(0,0,size,size).data;
-        let r=0,g=0,b=0,count=0;
-        for(let i=0;i<data.length;i+=16){
-          const a=data[i+3];
-          if(a<120)continue;
-          r+=data[i]; g+=data[i+1]; b+=data[i+2]; count++;
+
+        const imageData=ctx.getImageData(0,0,size,size).data;
+        const colors=[];
+
+        // Focus vooral op het midden. Randen zijn vaak muur, vloer of kast.
+        for(let y=18;y<size-18;y+=3){
+          for(let x=18;x<size-18;x+=3){
+            const i=(y*size+x)*4;
+            const r=imageData[i], g=imageData[i+1], b=imageData[i+2], a=imageData[i+3];
+            if(a<150)continue;
+
+            // Negeer typische lichte achtergrondpixels.
+            const max=Math.max(r,g,b), min=Math.min(r,g,b);
+            const sat=max-min;
+            const brightness=(r+g+b)/3;
+
+            // Heel lichte neutrale achtergrond telt minder mee, maar niet volledig negeren.
+            const weight=(brightness>225 && sat<25) ? 0.25 : 1;
+
+            colors.push({r,g,b,weight});
+          }
         }
-        if(!count){resolve('onbekend');return}
-        r=Math.round(r/count); g=Math.round(g/count); b=Math.round(b/count);
+
+        if(!colors.length){resolve('onbekend');return;}
+
+        // Gewogen gemiddelde
+        let r=0,g=0,b=0,total=0;
+        colors.forEach(c=>{
+          r+=c.r*c.weight;
+          g+=c.g*c.weight;
+          b+=c.b*c.weight;
+          total+=c.weight;
+        });
+
+        r=Math.round(r/total);
+        g=Math.round(g/total);
+        b=Math.round(b/total);
+
         resolve(colorName(r,g,b));
       };
       img.onerror=()=>resolve('onbekend');
@@ -130,21 +160,40 @@ function detectColorFromFile(file){
 }
 
 function colorName(r,g,b){
-  const max=Math.max(r,g,b), min=Math.min(r,g,b);
-  if(max<55)return 'zwart';
-  if(min>215)return 'wit';
-  if(max-min<25){
-    if(max>170)return 'grijs';
-    if(max>95)return 'grijs';
-    return 'zwart';
+  const max=Math.max(r,g,b);
+  const min=Math.min(r,g,b);
+  const diff=max-min;
+  const avg=(r+g+b)/3;
+
+  // Neutrale kleuren
+  if(avg<45)return 'zwart';
+  if(avg>225 && diff<28)return 'wit';
+  if(diff<22){
+    if(avg<80)return 'zwart';
+    if(avg>190)return 'wit';
+    return 'grijs';
   }
-  if(r>180&&g>150&&b<120)return 'beige';
-  if(r>160&&g<100&&b<100)return 'rood';
-  if(r>180&&g>110&&b>130)return 'roze';
-  if(r>200&&g>160&&b<90)return 'geel';
-  if(g>r&&g>b)return 'groen';
-  if(b>r&&b>g)return 'blauw';
-  if(r>120&&g>70&&b<70)return 'bruin';
+
+  // Beige / bruin / taupe
+  if(r>150 && g>125 && b>85 && r>=g && g>=b && diff<95){
+    if(avg>170)return 'beige';
+    return 'bruin';
+  }
+  if(r>95 && g>60 && b<70 && r>g && g>=b)return 'bruin';
+
+  // Kleurfamilies
+  if(r>190 && g>120 && b<80)return 'oranje';
+  if(r>185 && g>165 && b<100)return 'geel';
+  if(r>150 && g<120 && b<120)return 'rood';
+  if(r>170 && b>135 && g<150)return 'roze';
+  if(b>150 && r>100 && g<130)return 'paars';
+  if(b>r+25 && b>g+15)return 'blauw';
+  if(g>r+15 && g>b+10)return 'groen';
+
+  // Donkere varianten
+  if(b>r && b>g)return 'donkerblauw';
+  if(g>r && g>b)return 'donkergroen';
+
   return 'gemengd';
 }
 
