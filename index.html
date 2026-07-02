@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.0</title>
+  <title>eCloset 1.1</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.0 — stabiele cloudversie</small>
+  <small>eCloset 1.1 — stabiele cloudversie</small>
 </header>
 
 <main>
@@ -112,6 +112,20 @@
     <div class="notice"><b>Cloud actief</b><p>Nieuwe foto’s worden in Supabase opgeslagen.</p></div>
   </div>
 </aside>
+
+
+<div id="photoModal" class="modal">
+  <div class="modalCard">
+    <button class="modalClose" id="closePhotoModal">×</button>
+    <img id="modalImg" alt="">
+    <h2 id="modalTitle">Kledingstuk</h2>
+    <p id="modalMeta"></p>
+    <div class="modalActions">
+      <button id="modalRename">Naam toevoegen/wijzigen</button>
+      <button id="modalDelete" class="danger">Verwijderen</button>
+    </div>
+  </div>
+</div>
 
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
