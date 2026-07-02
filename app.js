@@ -2,6 +2,33 @@ const SUPABASE_URL='https://znsyaiaahsgwxdjishdy.supabase.co';
 const SUPABASE_KEY='sb_publishable_LhX228oDFbuBZB4z2fFUPA_6ZdtTdbK';
 const BUCKET='clothes';
 
+const COLORS=[
+  {id:'wit',label:'Wit',hex:'#ffffff'},
+  {id:'zwart',label:'Zwart',hex:'#1f1f1f'},
+  {id:'grijs',label:'Grijs',hex:'#9b9b9b'},
+  {id:'beige',label:'Beige',hex:'#d8c4a7'},
+  {id:'bruin',label:'Bruin',hex:'#8a5a35'},
+  {id:'rood',label:'Rood',hex:'#c8463a'},
+  {id:'roze',label:'Roze',hex:'#f0a6b6'},
+  {id:'oranje',label:'Oranje',hex:'#e48a3a'},
+  {id:'geel',label:'Geel',hex:'#f2cf4a'},
+  {id:'groen',label:'Groen',hex:'#4e9b58'},
+  {id:'blauw',label:'Blauw',hex:'#4f83bd'},
+  {id:'paars',label:'Paars',hex:'#8f6bb3'},
+  {id:'gemengd',label:'Gemengd',hex:'linear-gradient(135deg,#e57373,#ffd54f,#64b5f6)'}
+];
+
+const SEASONS=[
+  {id:'lente',label:'🌸 Lente'},
+  {id:'zomer',label:'☀️ Zomer'},
+  {id:'herfst',label:'🍂 Herfst'},
+  {id:'winter',label:'❄️ Winter'}
+];
+
+let currentModalItem=null;
+let modalColor='';
+let modalSeason='';
+
 const DEFAULT_CATEGORIES=[
   {id:'tops',name:'Tops',color:'#dcf4e6'},
   {id:'bottoms',name:'Broeken en rokken',color:'#d9ecff'},
@@ -249,6 +276,7 @@ async function deleteItem(id){
   if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
   try{
     await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
+    closePhotoModal();
     await loadCloud();
   }catch(e){
     console.error(e);
@@ -318,12 +346,27 @@ function createCard(item,selectable=false,closet=false){
     card.appendChild(name);
   }
 
+  const badges=document.createElement('div');
+  badges.className='itemBadges';
   if(item.color){
-    const pill=document.createElement('span');
-    pill.className='colorPill';
-    pill.textContent=item.color;
-    card.appendChild(pill);
+    const dot=document.createElement('span');
+    dot.className='itemDot';
+    dot.style.background=colorHex(item.color);
+    badges.appendChild(dot);
   }
+  if(item.season){
+    const pill=document.createElement('span');
+    pill.className='seasonPill';
+    pill.textContent=seasonLabel(item.season);
+    badges.appendChild(pill);
+  }
+  if(item.favorite){
+    const fav=document.createElement('span');
+    fav.className='seasonPill';
+    fav.textContent='⭐';
+    badges.appendChild(fav);
+  }
+  if(badges.children.length)card.appendChild(badges);
 
   return card;
 }
