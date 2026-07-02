@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset v3.1 Cloud</title>
+  <title>eCloset v3.4</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>Officiële testversie v3.1 Cloud</small>
+  <small>Officiële testversie v3.4</small>
 </header>
 
 <main>
@@ -54,7 +54,7 @@
     <div class="panel-title">
       <div>
         <h2>Mijn kast</h2>
-        <p>Nieuwe foto's worden vanaf nu in de cloud bewaard.</p>
+        <p>Foto’s worden automatisch in de cloud bewaard. Je kan meerdere foto’s tegelijk selecteren. Categorieën blijven nu bewaard.</p>
       </div>
       <button class="gear" id="closetSettingsBtn">⚙</button>
     </div>
@@ -87,7 +87,7 @@
 <section id="purchase" class="screen">
   <div class="panel yellow"><h2>Nieuwe aankoop</h2><p>Bewaar foto's of screenshots van kleding waarover je twijfelt.</p></div>
   <div class="sectionline"><h2>Twijfels</h2><button id="addPurchase">Foto toevoegen</button></div>
-  <input id="file-purchase" type="file" accept="image/*">
+  <input id="file-purchase" type="file" accept="image/*" multiple>
   <div id="purchaseList" class="row"></div>
 </section>
 
