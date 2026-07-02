@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset v3.0</title>
+  <title>eCloset v3.1 Cloud</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,11 +15,13 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>Officiële testversie v3.0</small>
+  <small>Officiële testversie v3.1 Cloud</small>
 </header>
 
 <main>
 <section id="home" class="screen active">
+  <div class="cloud-status" id="cloudStatus">☁️ Cloud verbinden...</div>
+
   <div class="ai" id="ai">
     <div class="aihead">
       <b>AI</b>
@@ -52,7 +54,7 @@
     <div class="panel-title">
       <div>
         <h2>Mijn kast</h2>
-        <p>Voeg kleding toe per categorie. Je beheert categorieën via het tandwiel.</p>
+        <p>Nieuwe foto's worden vanaf nu in de cloud bewaard.</p>
       </div>
       <button class="gear" id="closetSettingsBtn">⚙</button>
     </div>
@@ -92,12 +94,12 @@
 <section id="settings" class="screen">
   <div class="panel">
     <h2>Instellingen</h2>
-    <p>Beheer categorieën, back-up en toekomstige cloudopslag.</p>
+    <p>Beheer categorieën, back-up en cloudopslag.</p>
   </div>
   <div class="settings-grid">
     <button class="setting-card" id="addCat">+ Nieuwe categorie</button>
+    <button class="setting-card" id="refreshCloud">Cloud opnieuw laden</button>
     <button class="setting-card" id="backupBtn">Back-up maken</button>
-    <button class="setting-card disabled">Cloudopslag binnenkort</button>
   </div>
   <h2 class="section">Categorieën</h2>
   <div id="catList"></div>
@@ -112,10 +114,11 @@
     </div>
     <button class="drawer-option" id="drawerAddCat">Nieuwe categorie toevoegen</button>
     <button class="drawer-option" data-screen="settings">Categorieën beheren</button>
+    <button class="drawer-option" id="drawerRefresh">Cloud opnieuw laden</button>
     <button class="drawer-option" id="drawerBackup">Back-up maken</button>
-    <div class="warning">
-      <strong>Belangrijk</strong>
-      <p>Foto’s staan nu lokaal in deze browser. Maak voorlopig nog niet je hele kast, tot cloudopslag klaar is.</p>
+    <div class="success">
+      <strong>Cloud actief</strong>
+      <p>Nieuwe kledingfoto's worden naar Supabase gestuurd. Test eerst met 1 foto.</p>
     </div>
   </div>
 </aside>
