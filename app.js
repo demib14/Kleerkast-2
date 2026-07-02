@@ -2,6 +2,16 @@ const SUPABASE_URL='https://znsyaiaahsgwxdjishdy.supabase.co';
 const SUPABASE_KEY='sb_publishable_LhX228oDFbuBZB4z2fFUPA_6ZdtTdbK';
 const BUCKET='clothes';
 
+const DEFAULT_CATEGORIES=[
+  {id:'tops',name:'Tops',color:'#dcf4e6'},
+  {id:'bottoms',name:'Broeken en rokken',color:'#d9ecff'},
+  {id:'dresses',name:'Jurken',color:'#ffe1e9'},
+  {id:'jackets',name:'Jassen',color:'#fff0c9'},
+  {id:'shoes',name:'Schoenen',color:'#eadfff'},
+  {id:'bags',name:'Tassen',color:'#f1dfd2'},
+  {id:'accessories',name:'Accessoires',color:'#e8f0ff'}
+];
+
 const COLORS=[
   {id:'wit',label:'Wit',hex:'#ffffff'},
   {id:'zwart',label:'Zwart',hex:'#1f1f1f'},
@@ -15,7 +25,7 @@ const COLORS=[
   {id:'groen',label:'Groen',hex:'#4e9b58'},
   {id:'blauw',label:'Blauw',hex:'#4f83bd'},
   {id:'paars',label:'Paars',hex:'#8f6bb3'},
-  {id:'gemengd',label:'Gemengd',hex:'linear-gradient(135deg,#e57373,#ffd54f,#64b5f6)'}
+  {id:'gemengd',label:'Gemengd',hex:'#c9b7df'}
 ];
 
 const SEASONS=[
@@ -25,39 +35,29 @@ const SEASONS=[
   {id:'winter',label:'❄️ Winter'}
 ];
 
+let categories=[];
+let items=[];
+let selected={tops:null,bottoms:null,shoes:null,bags:null};
 let currentModalItem=null;
 let modalColor='';
 let modalSeason='';
 
-const DEFAULT_CATEGORIES=[
-  {id:'tops',name:'Tops',color:'#dcf4e6'},
-  {id:'bottoms',name:'Broeken en rokken',color:'#d9ecff'},
-  {id:'dresses',name:'Jurken',color:'#ffe1e9'},
-  {id:'jackets',name:'Jassen',color:'#fff0c9'},
-  {id:'shoes',name:'Schoenen',color:'#eadfff'},
-  {id:'bags',name:'Tassen',color:'#f1dfd2'},
-  {id:'accessories',name:'Accessoires',color:'#e8f0ff'}
-];
-
-let categories=[];
-let items=[];
-let outfits=[];
-let selected={tops:null,bottoms:null,shoes:null,bags:null};
+function safeGet(id){return document.getElementById(id)}
 
 function loadCategories(){
   try{
-    const saved=localStorage.getItem('ecloset_categories_1');
+    const saved=localStorage.getItem('ecloset_categories_fix');
     if(saved)return JSON.parse(saved);
   }catch(e){}
   return DEFAULT_CATEGORIES.map(c=>({...c}));
 }
 
 function saveCategories(){
-  localStorage.setItem('ecloset_categories_1',JSON.stringify(categories));
+  localStorage.setItem('ecloset_categories_fix',JSON.stringify(categories));
 }
 
 function setStatus(text,type=''){
-  const el=document.getElementById('cloudStatus');
+  const el=safeGet('cloudStatus');
   if(!el)return;
   el.textContent=text;
   el.className='cloud '+type;
@@ -85,7 +85,6 @@ async function loadCloud(){
     const res=await api('/rest/v1/clothing?select=*&order=created_at.desc');
     items=await res.json();
 
-    // Toon onbekende categorieën toch, zodat foto's nooit "verdwijnen".
     items.forEach(item=>{
       const cat=item.category||'tops';
       if(!categories.find(c=>c.id===cat)){
@@ -111,9 +110,11 @@ function resizeToBlob(file,maxSize=900,quality=.72){
       img.onload=()=>{
         let w=img.width,h=img.height;
         const scale=Math.min(1,maxSize/Math.max(w,h));
-        w=Math.round(w*scale); h=Math.round(h*scale);
+        w=Math.round(w*scale);
+        h=Math.round(h*scale);
         const canvas=document.createElement('canvas');
-        canvas.width=w; canvas.height=h;
+        canvas.width=w;
+        canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
         canvas.toBlob(blob=>resolve(blob),'image/jpeg',quality);
       };
@@ -125,7 +126,6 @@ function resizeToBlob(file,maxSize=900,quality=.72){
   });
 }
 
-
 function detectColorFromFile(file){
   return new Promise(resolve=>{
     const reader=new FileReader();
@@ -133,115 +133,60 @@ function detectColorFromFile(file){
       const img=new Image();
       img.onload=()=>{
         const canvas=document.createElement('canvas');
-        const size=120;
+        const size=100;
         canvas.width=size;
         canvas.height=size;
         const ctx=canvas.getContext('2d');
         ctx.drawImage(img,0,0,size,size);
-
-        const imageData=ctx.getImageData(0,0,size,size).data;
-        const colors=[];
-
-        // Focus vooral op het midden. Randen zijn vaak muur, vloer of kast.
-        for(let y=18;y<size-18;y+=3){
-          for(let x=18;x<size-18;x+=3){
+        const data=ctx.getImageData(0,0,size,size).data;
+        let r=0,g=0,b=0,count=0;
+        for(let y=20;y<size-20;y+=4){
+          for(let x=20;x<size-20;x+=4){
             const i=(y*size+x)*4;
-            const r=imageData[i], g=imageData[i+1], b=imageData[i+2], a=imageData[i+3];
-            if(a<150)continue;
-
-            // Negeer typische lichte achtergrondpixels.
-            const max=Math.max(r,g,b), min=Math.min(r,g,b);
-            const sat=max-min;
-            const brightness=(r+g+b)/3;
-
-            // Heel lichte neutrale achtergrond telt minder mee, maar niet volledig negeren.
-            const weight=(brightness>225 && sat<25) ? 0.25 : 1;
-
-            colors.push({r,g,b,weight});
+            r+=data[i];g+=data[i+1];b+=data[i+2];count++;
           }
         }
-
-        if(!colors.length){resolve('onbekend');return;}
-
-        // Gewogen gemiddelde
-        let r=0,g=0,b=0,total=0;
-        colors.forEach(c=>{
-          r+=c.r*c.weight;
-          g+=c.g*c.weight;
-          b+=c.b*c.weight;
-          total+=c.weight;
-        });
-
-        r=Math.round(r/total);
-        g=Math.round(g/total);
-        b=Math.round(b/total);
-
-        resolve(colorName(r,g,b));
+        if(!count){resolve('gemengd');return}
+        resolve(colorName(Math.round(r/count),Math.round(g/count),Math.round(b/count)));
       };
-      img.onerror=()=>resolve('onbekend');
+      img.onerror=()=>resolve('gemengd');
       img.src=e.target.result;
     };
-    reader.onerror=()=>resolve('onbekend');
+    reader.onerror=()=>resolve('gemengd');
     reader.readAsDataURL(file);
   });
 }
 
 function colorName(r,g,b){
-  const max=Math.max(r,g,b);
-  const min=Math.min(r,g,b);
-  const diff=max-min;
-  const avg=(r+g+b)/3;
-
-  // Neutrale kleuren
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),diff=max-min,avg=(r+g+b)/3;
   if(avg<45)return 'zwart';
-  if(avg>225 && diff<28)return 'wit';
-  if(diff<22){
-    if(avg<80)return 'zwart';
-    if(avg>190)return 'wit';
-    return 'grijs';
-  }
-
-  // Beige / bruin / taupe
-  if(r>150 && g>125 && b>85 && r>=g && g>=b && diff<95){
-    if(avg>170)return 'beige';
-    return 'bruin';
-  }
-  if(r>95 && g>60 && b<70 && r>g && g>=b)return 'bruin';
-
-  // Kleurfamilies
-  if(r>190 && g>120 && b<80)return 'oranje';
-  if(r>185 && g>165 && b<100)return 'geel';
-  if(r>150 && g<120 && b<120)return 'rood';
-  if(r>170 && b>135 && g<150)return 'roze';
-  if(b>150 && r>100 && g<130)return 'paars';
-  if(b>r+25 && b>g+15)return 'blauw';
-  if(g>r+15 && g>b+10)return 'groen';
-
-  // Donkere varianten
-  if(b>r && b>g)return 'donkerblauw';
-  if(g>r && g>b)return 'donkergroen';
-
+  if(avg>225&&diff<35)return 'wit';
+  if(diff<25)return avg>170?'wit':avg<90?'zwart':'grijs';
+  if(r>150&&g>125&&b>85&&r>=g&&g>=b&&diff<95)return avg>170?'beige':'bruin';
+  if(r>150&&g<120&&b<120)return 'rood';
+  if(r>170&&b>135&&g<150)return 'roze';
+  if(r>190&&g>120&&b<90)return 'oranje';
+  if(r>185&&g>165&&b<100)return 'geel';
+  if(g>r+15&&g>b+10)return 'groen';
+  if(b>r+25&&b>g+15)return 'blauw';
+  if(b>150&&r>100&&g<140)return 'paars';
   return 'gemengd';
 }
-
 
 async function uploadImage(file){
   const blob=await resizeToBlob(file);
   const filename='item-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.jpg';
-
   await api('/storage/v1/object/'+BUCKET+'/'+filename,{
     method:'POST',
     headers:{'Content-Type':'image/jpeg','x-upsert':'true'},
     body:blob
   });
-
   return SUPABASE_URL+'/storage/v1/object/public/'+BUCKET+'/'+filename;
 }
 
 async function addPhotos(category,files){
   const list=Array.from(files||[]);
   if(!list.length)return;
-
   let success=0;
   for(let i=0;i<list.length;i++){
     try{
@@ -284,20 +229,21 @@ async function deleteItem(id){
   }
 }
 
-async function renameItem(id){
-  const item=items.find(x=>x.id===id);
-  if(!item)return;
-  const name=prompt('Naam van kledingstuk?',item.name||'');
-  if(name===null)return;
+async function saveModalItem(){
+  if(!currentModalItem)return;
+  const name=(safeGet('modalName')?.value||'').trim();
+  const favorite=!!safeGet('modalFav')?.checked;
   try{
-    await api('/rest/v1/clothing?id=eq.'+id,{
+    await api('/rest/v1/clothing?id=eq.'+currentModalItem.id,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name})
+      body:JSON.stringify({name,color:modalColor,season:modalSeason,favorite})
     });
+    closePhotoModal();
     await loadCloud();
   }catch(e){
-    alert('Naam wijzigen mislukt.');
+    console.error(e);
+    alert('Opslaan mislukt.');
   }
 }
 
@@ -305,31 +251,41 @@ function navigate(screen){
   closeDrawer();
   localStorage.setItem('ecloset_last_screen',screen);
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(screen).classList.add('active');
+  const target=safeGet(screen);
+  if(target)target.classList.add('active');
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
   window.scrollTo(0,0);
   renderAll();
   setTimeout(updateCenterCards,80);
 }
 
-function openDrawer(){document.getElementById('drawer').classList.add('open')}
-function closeDrawer(){document.getElementById('drawer').classList.remove('open')}
-function pick(category){document.getElementById('file-'+category)?.click()}
+function openDrawer(){safeGet('drawer')?.classList.add('open')}
+function closeDrawer(){safeGet('drawer')?.classList.remove('open')}
+function pick(category){safeGet('file-'+category)?.click()}
 
 function itemsFor(category){
   return items.filter(item=>(item.category||'tops')===category);
 }
 
-function createCard(item,selectable=false,closet=false){
+function colorHex(id){
+  const c=COLORS.find(x=>x.id===id);
+  return c?c.hex:'#c9b7df';
+}
+
+function seasonLabel(id){
+  const s=SEASONS.find(x=>x.id===id);
+  return s?s.label:id;
+}
+
+function createCard(item,selectable=false){
   const card=document.createElement('article');
   card.className='item';
-
   const img=document.createElement('img');
   img.src=item.image_url;
   img.onclick=()=>{
     if(selectable){
       selected[item.category]=item.id;
-      const slot=document.getElementById('slot-'+item.category);
+      const slot=safeGet('slot-'+item.category);
       if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
       document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
       card.classList.add('active');
@@ -348,26 +304,29 @@ function createCard(item,selectable=false,closet=false){
 
   const badges=document.createElement('div');
   badges.className='itemBadges';
+
   if(item.color){
     const dot=document.createElement('span');
     dot.className='itemDot';
     dot.style.background=colorHex(item.color);
     badges.appendChild(dot);
   }
+
   if(item.season){
-    const pill=document.createElement('span');
-    pill.className='seasonPill';
-    pill.textContent=seasonLabel(item.season);
-    badges.appendChild(pill);
+    const season=document.createElement('span');
+    season.className='seasonPill';
+    season.textContent=seasonLabel(item.season);
+    badges.appendChild(season);
   }
+
   if(item.favorite){
     const fav=document.createElement('span');
     fav.className='seasonPill';
     fav.textContent='⭐';
     badges.appendChild(fav);
   }
-  if(badges.children.length)card.appendChild(badges);
 
+  if(badges.children.length)card.appendChild(badges);
   return card;
 }
 
@@ -376,28 +335,28 @@ function createRow(category,selectable=false,closet=false){
   row.className='row '+(closet?'closetRow':'');
   row.dataset.row=category;
   const list=itemsFor(category);
-
   if(!list.length){
-    const empty=document.createElement('div');
-    empty.className='empty';
-    empty.textContent='Nog geen foto’s';
-    row.appendChild(empty);
+    const e=document.createElement('div');
+    e.className='empty';
+    e.textContent='Nog geen foto’s';
+    row.appendChild(e);
   }else{
-    list.forEach(item=>row.appendChild(createCard(item,selectable,closet)));
+    list.forEach(item=>row.appendChild(createCard(item,selectable)));
   }
+  row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
   return row;
 }
 
 function renderStats(){
-  document.getElementById('stats').innerHTML=
-    '<div class="stat"><strong>'+items.length+'</strong><span>kledingstukken in cloud</span></div>'+
-    '<div class="stat"><strong>'+categories.length+'</strong><span>categorieën</span></div>';
+  const el=safeGet('stats');
+  if(!el)return;
+  el.innerHTML='<div class="stat"><strong>'+items.length+'</strong><span>kledingstukken in cloud</span></div><div class="stat"><strong>'+categories.length+'</strong><span>categorieën</span></div>';
 }
 
 function renderCloset(){
-  const container=document.getElementById('closetContent');
+  const container=safeGet('closetContent');
+  if(!container)return;
   container.innerHTML='';
-
   categories.forEach(cat=>{
     const block=document.createElement('section');
     block.className='catBlock';
@@ -429,7 +388,8 @@ function renderCloset(){
 }
 
 function renderBuilder(){
-  const container=document.getElementById('builderContent');
+  const container=safeGet('builderContent');
+  if(!container)return;
   container.innerHTML='';
   ['tops','bottoms','shoes','bags'].forEach(id=>{
     const cat=categories.find(c=>c.id===id);
@@ -442,7 +402,8 @@ function renderBuilder(){
 }
 
 function renderRecent(){
-  const container=document.getElementById('recent');
+  const container=safeGet('recent');
+  if(!container)return;
   container.innerHTML='';
   const recent=items.slice(0,4);
   if(!recent.length){
@@ -455,25 +416,26 @@ function renderRecent(){
     });
   }else{
     recent.forEach(item=>{
-      const c=document.createElement('article');
-      c.className='item active';
-      c.innerHTML='<img src="'+item.image_url+'">';
-      container.appendChild(c);
+      const card=createCard(item,false);
+      card.classList.add('active');
+      container.appendChild(card);
     });
   }
 }
 
 function renderPurchase(){
-  const c=document.getElementById('purchaseContent');
+  const c=safeGet('purchaseContent');
+  if(!c)return;
   c.innerHTML='';
   const e=document.createElement('div');
   e.className='empty';
-  e.textContent='Nieuwe aankoop volgt in de volgende stap';
+  e.textContent='Nieuwe aankoop volgt later';
   c.appendChild(e);
 }
 
 function renderOutfits(){
-  const c=document.getElementById('savedOutfits');
+  const c=safeGet('savedOutfits');
+  if(!c)return;
   c.innerHTML='';
   const e=document.createElement('div');
   e.className='empty';
@@ -482,14 +444,13 @@ function renderOutfits(){
 }
 
 function renderCategories(){
-  const c=document.getElementById('categoryList');
+  const c=safeGet('categoryList');
+  if(!c)return;
   c.innerHTML='';
-
   categories.forEach((cat,index)=>{
     const row=document.createElement('div');
     row.className='catrow';
     row.innerHTML='<div class="catleft"><span class="dot" style="background:'+cat.color+'"></span>'+cat.name+'</div>';
-
     const actions=document.createElement('div');
     actions.className='catactions';
 
@@ -508,6 +469,80 @@ function renderCategories(){
 
     row.appendChild(actions);
     c.appendChild(row);
+  });
+}
+
+function openPhotoModal(item){
+  currentModalItem=item;
+  modalColor=item.color||'';
+  modalSeason=item.season||'';
+
+  safeGet('modalImg').src=item.image_url;
+  safeGet('modalTitle').textContent=item.name||'Naamloos kledingstuk';
+  safeGet('modalName').value=item.name||'';
+  safeGet('modalFav').checked=!!item.favorite;
+
+  renderModalColors();
+  renderModalSeasons();
+  safeGet('photoModal')?.classList.add('open');
+}
+
+function closePhotoModal(){
+  safeGet('photoModal')?.classList.remove('open');
+  currentModalItem=null;
+}
+
+function renderModalColors(){
+  const box=safeGet('modalColors');
+  if(!box)return;
+  box.innerHTML='';
+  COLORS.forEach(color=>{
+    const b=document.createElement('button');
+    b.className='colorChoice '+(modalColor===color.id?'active':'');
+    const dot=document.createElement('span');
+    dot.className='colorDot';
+    dot.style.background=color.hex;
+    b.appendChild(dot);
+    b.append(color.label);
+    b.onclick=()=>{modalColor=color.id;renderModalColors()};
+    box.appendChild(b);
+  });
+}
+
+function renderModalSeasons(){
+  const box=safeGet('modalSeasons');
+  if(!box)return;
+  box.innerHTML='';
+  const none=document.createElement('button');
+  none.className='seasonChoice '+(!modalSeason?'active':'');
+  none.textContent='Geen';
+  none.onclick=()=>{modalSeason='';renderModalSeasons()};
+  box.appendChild(none);
+
+  SEASONS.forEach(season=>{
+    const b=document.createElement('button');
+    b.className='seasonChoice '+(modalSeason===season.id?'active':'');
+    b.textContent=season.label;
+    b.onclick=()=>{modalSeason=season.id;renderModalSeasons()};
+    box.appendChild(b);
+  });
+}
+
+function updateCenterCards(){
+  document.querySelectorAll('.row').forEach(row=>{
+    const cards=[...row.querySelectorAll('.item')];
+    if(!cards.length)return;
+    const box=row.getBoundingClientRect();
+    const center=box.left+box.width/2;
+    let best=null,bestDist=Infinity;
+    cards.forEach(card=>{
+      const r=card.getBoundingClientRect();
+      const c=r.left+r.width/2;
+      const dist=Math.abs(center-c);
+      if(dist<bestDist){bestDist=dist;best=card}
+      card.classList.remove('center');
+    });
+    if(best)best.classList.add('center');
   });
 }
 
@@ -544,7 +579,7 @@ function deleteCategory(id){
   if(!cat)return;
   const count=itemsFor(id).length;
   if(count>0){
-    alert('Deze categorie bevat nog '+count+' foto(\'s). Verwijder die eerst, zodat je niets per ongeluk kwijt bent.');
+    alert('Deze categorie bevat nog '+count+' foto(\'s). Verwijder die eerst.');
     return;
   }
   if(!confirm('Categorie "'+cat.name+'" verwijderen?'))return;
@@ -558,51 +593,17 @@ function saveOutfit(){
     alert('Kies eerst minstens één kledingstuk.');
     return;
   }
-  alert('Outfits bewaren werken we in de volgende stap verder af.');
+  alert('Outfits bewaren werken we later verder af.');
 }
 
 function clearOutfit(){
   selected={tops:null,bottoms:null,shoes:null,bags:null};
   Object.entries({tops:'Top',bottoms:'Onderstuk',shoes:'Schoenen',bags:'Tas'}).forEach(([id,label])=>{
-    document.getElementById('slot-'+id).textContent=label;
+    const slot=safeGet('slot-'+id);
+    if(slot)slot.textContent=label;
   });
   document.querySelectorAll('.item.active').forEach(c=>c.classList.remove('active'));
 }
-
-
-let currentModalItem=null;
-
-function openPhotoModal(item){
-  currentModalItem=item;
-  document.getElementById('modalImg').src=item.image_url;
-  document.getElementById('modalTitle').textContent=item.name||'Naamloos kledingstuk';
-  document.getElementById('modalMeta').textContent='Kleur: '+(item.color||'onbekend')+' • Seizoen: '+(item.season||'nog niet ingesteld');
-  document.getElementById('photoModal').classList.add('open');
-}
-
-function closePhotoModal(){
-  document.getElementById('photoModal').classList.remove('open');
-  currentModalItem=null;
-}
-
-function updateCenterCards(){
-  document.querySelectorAll('.row').forEach(row=>{
-    const cards=[...row.querySelectorAll('.item')];
-    if(!cards.length)return;
-    const box=row.getBoundingClientRect();
-    const center=box.left+box.width/2;
-    let best=null,bestDist=Infinity;
-    cards.forEach(card=>{
-      const r=card.getBoundingClientRect();
-      const c=r.left+r.width/2;
-      const dist=Math.abs(center-c);
-      if(dist<bestDist){bestDist=dist;best=card}
-      card.classList.remove('center');
-    });
-    if(best)best.classList.add('center');
-  });
-}
-
 
 function renderAll(){
   renderStats();
@@ -620,33 +621,40 @@ function bindEvents(){
     btn.onclick=()=>navigate(btn.dataset.screen);
   });
 
-  document.getElementById('settingsBtn').onclick=openDrawer;
-  document.getElementById('closetGear').onclick=openDrawer;
-  document.getElementById('closeDrawer').onclick=closeDrawer;
+  if(safeGet('settingsBtn'))safeGet('settingsBtn').onclick=openDrawer;
+  if(safeGet('closetGear'))safeGet('closetGear').onclick=openDrawer;
+  if(safeGet('closeDrawer'))safeGet('closeDrawer').onclick=closeDrawer;
 
-  document.getElementById('toggleAi').onclick=()=>{
-    const box=document.getElementById('aiBox');
+  if(safeGet('toggleAi'))safeGet('toggleAi').onclick=()=>{
+    const box=safeGet('aiBox');
+    if(!box)return;
     box.classList.toggle('closed');
-    document.getElementById('toggleAi').textContent=box.classList.contains('closed')?'⌄':'⌃';
+    safeGet('toggleAi').textContent=box.classList.contains('closed')?'⌄':'⌃';
   };
 
-  document.getElementById('addCategory').onclick=addCategory;
-  document.getElementById('drawerAddCategory').onclick=addCategory;
-  document.getElementById('refreshCloud').onclick=loadCloud;
-  document.getElementById('drawerRefresh').onclick=loadCloud;
-  document.getElementById('saveOutfit').onclick=saveOutfit;
-  document.getElementById('clearOutfit').onclick=clearOutfit;
-  document.getElementById('closePhotoModal').onclick=closePhotoModal;
-  document.getElementById('photoModal').onclick=e=>{if(e.target.id==='photoModal')closePhotoModal()};
-  document.getElementById('modalRename').onclick=()=>{if(currentModalItem)renameItem(currentModalItem.id)};
-  document.getElementById('modalDelete').onclick=()=>{if(currentModalItem){const id=currentModalItem.id;closePhotoModal();deleteItem(id)}};
-  document.addEventListener('scroll',()=>setTimeout(updateCenterCards,20),true);
+  if(safeGet('addCategory'))safeGet('addCategory').onclick=addCategory;
+  if(safeGet('drawerAddCategory'))safeGet('drawerAddCategory').onclick=addCategory;
+  if(safeGet('refreshCloud'))safeGet('refreshCloud').onclick=loadCloud;
+  if(safeGet('drawerRefresh'))safeGet('drawerRefresh').onclick=loadCloud;
+  if(safeGet('saveOutfit'))safeGet('saveOutfit').onclick=saveOutfit;
+  if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
 
-  document.getElementById('addPurchase').onclick=()=>pick('purchase');
-  document.getElementById('file-purchase').onchange=e=>{
+  if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
+  if(safeGet('file-purchase'))safeGet('file-purchase').onchange=e=>{
     addPhotos('purchase',e.target.files);
     e.target.value='';
   };
+
+  if(safeGet('closePhotoModal'))safeGet('closePhotoModal').onclick=closePhotoModal;
+  if(safeGet('photoModal'))safeGet('photoModal').onclick=e=>{
+    if(e.target.id==='photoModal')closePhotoModal();
+  };
+  if(safeGet('modalSave'))safeGet('modalSave').onclick=saveModalItem;
+  if(safeGet('modalDelete'))safeGet('modalDelete').onclick=()=>{
+    if(currentModalItem)deleteItem(currentModalItem.id);
+  };
+
+  document.addEventListener('scroll',()=>setTimeout(updateCenterCards,20),true);
 }
 
 async function start(){
@@ -655,7 +663,7 @@ async function start(){
   renderAll();
   await loadCloud();
   const last=localStorage.getItem('ecloset_last_screen')||'home';
-  if(document.getElementById(last))navigate(last);
+  if(safeGet(last))navigate(last);
 }
 
 start();

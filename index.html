@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.5a</title>
+  <title>eCloset 1.5a fix</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.5a — stabiele cloudversie</small>
+  <small>eCloset 1.5a fix — detailvenster</small>
 </header>
 
 <main>
@@ -54,7 +54,7 @@
       <div class="panelTitle">
         <div>
           <h2>Mijn kast</h2>
-          <p>Foto’s worden automatisch in de cloud bewaard. Achtergrond verwijderen staat tijdelijk uit tot we een echte AI-verwijderfunctie hebben. Selecteer gerust meerdere foto’s tegelijk.</p>
+          <p>Foto’s worden automatisch in de cloud bewaard. Klik op een foto om details aan te passen.</p>
         </div>
         <button class="round" id="closetGear">⚙</button>
       </div>
@@ -94,7 +94,7 @@
   <section id="settings" class="screen">
     <div class="panel">
       <h2>Instellingen</h2>
-      <p>Beheer je categorieën. Deze instellingen blijven lokaal bewaard.</p>
+      <p>Beheer je categorieën.</p>
     </div>
     <button id="addCategory">Nieuwe categorie toevoegen</button>
     <button class="light" id="refreshCloud">Cloud opnieuw laden</button>
@@ -113,15 +113,25 @@
   </div>
 </aside>
 
-
 <div id="photoModal" class="modal">
   <div class="modalCard">
     <button class="modalClose" id="closePhotoModal">×</button>
     <img id="modalImg" alt="">
     <h2 id="modalTitle">Kledingstuk</h2>
-    <p id="modalMeta"></p>
+
+    <label class="fieldLabel">Naam</label>
+    <input id="modalName" class="textInput" placeholder="Optioneel">
+
+    <label class="fieldLabel">Kleur</label>
+    <div id="modalColors" class="choiceRow"></div>
+
+    <label class="fieldLabel">Seizoen</label>
+    <div id="modalSeasons" class="choiceRow"></div>
+
+    <label class="favLine"><input type="checkbox" id="modalFav"><span>⭐ Favoriet</span></label>
+
     <div class="modalActions">
-      <button id="modalRename">Naam toevoegen/wijzigen</button>
+      <button id="modalSave">Opslaan</button>
       <button id="modalDelete" class="danger">Verwijderen</button>
     </div>
   </div>
