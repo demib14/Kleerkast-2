@@ -198,128 +198,13 @@ function colorName(r,g,b){
 }
 
 
-
-function dist(a,b){
-  return Math.sqrt((a[0]-b[0])**2+(a[1]-b[1])**2+(a[2]-b[2])**2);
-}
-
-function medianColor(samples){
-  const r=samples.map(x=>x[0]).sort((a,b)=>a-b);
-  const g=samples.map(x=>x[1]).sort((a,b)=>a-b);
-  const b=samples.map(x=>x[2]).sort((a,b)=>a-b);
-  const m=Math.floor(samples.length/2);
-  return [r[m],g[m],b[m]];
-}
-
-async function removeBackgroundToBlob(file,maxSize=1000){
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const img=new Image();
-      img.onload=()=>{
-        let w=img.width,h=img.height;
-        const scale=Math.min(1,maxSize/Math.max(w,h));
-        w=Math.round(w*scale); h=Math.round(h*scale);
-
-        const canvas=document.createElement('canvas');
-        canvas.width=w; canvas.height=h;
-        const ctx=canvas.getContext('2d');
-        ctx.drawImage(img,0,0,w,h);
-
-        const imgData=ctx.getImageData(0,0,w,h);
-        const data=imgData.data;
-
-        // Achtergrondkleur schatten via randen/corners.
-        const samples=[];
-        const step=Math.max(1,Math.floor(Math.min(w,h)/40));
-        for(let x=0;x<w;x+=step){
-          let i=(0*w+x)*4; samples.push([data[i],data[i+1],data[i+2]]);
-          i=((h-1)*w+x)*4; samples.push([data[i],data[i+1],data[i+2]]);
-        }
-        for(let y=0;y<h;y+=step){
-          let i=(y*w+0)*4; samples.push([data[i],data[i+1],data[i+2]]);
-          i=(y*w+(w-1))*4; samples.push([data[i],data[i+1],data[i+2]]);
-        }
-        const bg=medianColor(samples);
-
-        // Pixels die lijken op achtergrond transparant maken.
-        // Midden wordt iets beschermd zodat kleding niet te snel verdwijnt.
-        for(let y=0;y<h;y++){
-          for(let x=0;x<w;x++){
-            const i=(y*w+x)*4;
-            const rgb=[data[i],data[i+1],data[i+2]];
-            const d=dist(rgb,bg);
-            const cx=Math.abs(x-w/2)/(w/2);
-            const cy=Math.abs(y-h/2)/(h/2);
-            const edgeBoost=Math.max(cx,cy);
-            const threshold=42 + edgeBoost*45;
-
-            if(d<threshold){
-              data[i+3]=0;
-            }else if(d<threshold+18){
-              data[i+3]=Math.max(60,Math.min(255,(d-threshold)*14));
-            }
-          }
-        }
-
-        ctx.putImageData(imgData,0,0);
-
-        // Crop rond overblijvende pixels
-        const cropped=cropTransparent(canvas);
-        cropped.toBlob(blob=>resolve(blob),'image/png');
-      };
-      img.onerror=reject;
-      img.src=e.target.result;
-    };
-    reader.onerror=reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-function cropTransparent(canvas){
-  const ctx=canvas.getContext('2d');
-  const w=canvas.width,h=canvas.height;
-  const img=ctx.getImageData(0,0,w,h);
-  const data=img.data;
-  let minX=w,minY=h,maxX=0,maxY=0,found=false;
-
-  for(let y=0;y<h;y++){
-    for(let x=0;x<w;x++){
-      const a=data[(y*w+x)*4+3];
-      if(a>30){
-        found=true;
-        if(x<minX)minX=x;
-        if(y<minY)minY=y;
-        if(x>maxX)maxX=x;
-        if(y>maxY)maxY=y;
-      }
-    }
-  }
-
-  if(!found)return canvas;
-
-  const pad=Math.round(Math.min(w,h)*0.04);
-  minX=Math.max(0,minX-pad);
-  minY=Math.max(0,minY-pad);
-  maxX=Math.min(w,maxX+pad);
-  maxY=Math.min(h,maxY+pad);
-
-  const cw=maxX-minX+1;
-  const ch=maxY-minY+1;
-  const out=document.createElement('canvas');
-  out.width=cw;
-  out.height=ch;
-  out.getContext('2d').drawImage(canvas,minX,minY,cw,ch,0,0,cw,ch);
-  return out;
-}
-
 async function uploadImage(file){
-  const blob=await removeBackgroundToBlob(file);
-  const filename='cutout-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.png';
+  const blob=await resizeToBlob(file);
+  const filename='item-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.jpg';
 
   await api('/storage/v1/object/'+BUCKET+'/'+filename,{
     method:'POST',
-    headers:{'Content-Type':'image/png','x-upsert':'true'},
+    headers:{'Content-Type':'image/jpeg','x-upsert':'true'},
     body:blob
   });
 
@@ -333,7 +218,7 @@ async function addPhotos(category,files){
   let success=0;
   for(let i=0;i<list.length;i++){
     try{
-      setStatus('✂️ Achtergrond verwijderen — foto '+(i+1)+' van '+list.length+'...');
+      setStatus('☁️ Foto '+(i+1)+' van '+list.length+' uploaden...');
       const detectedColor=await detectColorFromFile(list[i]);
       const url=await uploadImage(list[i]);
       await api('/rest/v1/clothing',{
@@ -438,12 +323,6 @@ function createCard(item,selectable=false,closet=false){
     pill.className='colorPill';
     pill.textContent=item.color;
     card.appendChild(pill);
-  }
-  if(item.image_url && item.image_url.includes('cutout-')){
-    const cut=document.createElement('span');
-    cut.className='cutoutNote';
-    cut.textContent='achtergrond weg';
-    card.appendChild(cut);
   }
 
   return card;
