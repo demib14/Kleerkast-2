@@ -41,6 +41,7 @@ let selected={tops:null,bottoms:null,shoes:null,bags:null};
 let currentModalItem=null;
 let modalColor='';
 let modalSeason='';
+let colorFilters={};
 
 function safeGet(id){return document.getElementById(id)}
 
@@ -54,6 +55,18 @@ function loadCategories(){
 
 function saveCategories(){
   localStorage.setItem('ecloset_categories_fix',JSON.stringify(categories));
+}
+
+function loadColorFilters(){
+  try{
+    const saved=localStorage.getItem('ecloset_color_filters');
+    if(saved)return JSON.parse(saved);
+  }catch(e){}
+  return {};
+}
+
+function saveColorFilters(){
+  localStorage.setItem('ecloset_color_filters',JSON.stringify(colorFilters));
 }
 
 function setStatus(text,type=''){
@@ -264,6 +277,13 @@ function closeDrawer(){safeGet('drawer')?.classList.remove('open')}
 function pick(category){safeGet('file-'+category)?.click()}
 
 function itemsFor(category){
+  let list=items.filter(item=>(item.category||'tops')===category);
+  const active=colorFilters[category];
+  if(active)list=list.filter(item=>(item.color||'')===active);
+  return list;
+}
+
+function allItemsFor(category){
   return items.filter(item=>(item.category||'tops')===category);
 }
 
@@ -353,6 +373,48 @@ function renderStats(){
   el.innerHTML='<div class="stat"><strong>'+items.length+'</strong><span>kledingstukken in cloud</span></div><div class="stat"><strong>'+categories.length+'</strong><span>categorieën</span></div>';
 }
 
+
+function createColorFilter(category){
+  const wrap=document.createElement('div');
+
+  const title=document.createElement('div');
+  title.className='filterTitle';
+  title.textContent='Filter op kleur';
+  wrap.appendChild(title);
+
+  const bar=document.createElement('div');
+  bar.className='filterBar';
+
+  const all=document.createElement('button');
+  all.className='filterBtn '+(!colorFilters[category]?'active':'');
+  all.textContent='Alle kleuren';
+  all.onclick=()=>{
+    colorFilters[category]='';
+    saveColorFilters();
+    renderAll();
+  };
+  bar.appendChild(all);
+
+  COLORS.forEach(color=>{
+    const btn=document.createElement('button');
+    btn.className='filterBtn '+(colorFilters[category]===color.id?'active':'');
+    const dot=document.createElement('span');
+    dot.className='colorDot';
+    dot.style.background=color.hex;
+    btn.appendChild(dot);
+    btn.append(color.label);
+    btn.onclick=()=>{
+      colorFilters[category]=color.id;
+      saveColorFilters();
+      renderAll();
+    };
+    bar.appendChild(btn);
+  });
+
+  wrap.appendChild(bar);
+  return wrap;
+}
+
 function renderCloset(){
   const container=safeGet('closetContent');
   if(!container)return;
@@ -365,7 +427,7 @@ function renderCloset(){
     top.className='catTop';
 
     const left=document.createElement('div');
-    left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
+    left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' zichtbaar • '+allItemsFor(cat.id).length+' totaal</div>';
 
     const btn=document.createElement('button');
     btn.textContent='Foto toevoegen';
@@ -382,7 +444,7 @@ function renderCloset(){
     };
 
     top.append(left,btn);
-    block.append(top,input,createRow(cat.id,false,true));
+    block.append(top,input,createColorFilter(cat.id),createRow(cat.id,false,true));
     container.appendChild(block);
   });
 }
@@ -659,6 +721,7 @@ function bindEvents(){
 
 async function start(){
   categories=loadCategories();
+  colorFilters=loadColorFilters();
   bindEvents();
   renderAll();
   await loadCloud();
