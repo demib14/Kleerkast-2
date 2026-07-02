@@ -11,3 +11,6 @@
 .item.center{transform:scale(1.12);opacity:1;box-shadow:0 20px 45px rgba(61,43,31,.20);z-index:3}
 .item{cursor:pointer}
 .colorPill{display:inline-block;margin-top:7px;border-radius:999px;background:#f2e7dd;color:#6f5140;padding:5px 9px;font-size:12px;font-weight:800}
+
+.item img{background:linear-gradient(135deg,#fffdfa,#f4eee7)}
+.cutoutNote{display:inline-block;margin-top:7px;border-radius:999px;background:#eef8ef;color:#477b50;padding:5px 9px;font-size:12px;font-weight:800}
