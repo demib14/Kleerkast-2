@@ -1,27 +1,132 @@
-<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Kleerkast v2.1</title><link rel="stylesheet" href="style.css"></head><body>
-<header class="hero"><div class="topbar"><button class="icon" id="settingsBtn">☰</button><div><button class="icon">⌕</button><button class="icon">♡</button></div></div><h1>Kleerkast</h1><p>Jouw kleding, outfits en ideeën op één plek.</p><small>Officiële testversie v2.1</small></header>
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>eCloset v3.0</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <div class="topbar">
+    <button class="icon" id="settingsBtn">☰</button>
+    <div class="brand"><div class="hanger">⌁</div><span>eCloset</span></div>
+    <button class="icon">♡</button>
+  </div>
+  <h1>eCloset</h1>
+  <p>Jouw virtuele garderobe.</p>
+  <small>Officiële testversie v3.0</small>
+</header>
+
 <main>
 <section id="home" class="screen active">
-<div class="ai" id="ai"><div class="aihead"><b>AI</b><div><small>Hallo Demi</small><h2>Hoe kan ik je vandaag helpen?</h2></div><button id="toggleAi">⌃</button></div><div class="aibody"><input placeholder="Stel me een vraag..."><div class="chips"><button>Wat kan ik vandaag aantrekken?</button><button>Toon outfits met groen</button><button>Wat past goed bij beige?</button></div></div></div>
-<div class="grid">
-<button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p>Bekijk en beheer je kleding</p><div class="photo closet"></div></button>
-<button class="tile blue" data-screen="builder"><h3>Nieuwe outfit</h3><p>Stel een outfit samen</p><div class="photo builder"></div></button>
-<button class="tile pink" data-screen="outfits"><h3>Outfits</h3><p>Bewaarde combinaties</p><div class="photo outfits"></div></button>
-<button class="tile yellow" data-screen="purchase"><h3>Nieuwe aankoop</h3><p>Bewaar twijfels en ideeën</p><div class="photo purchase"></div></button>
-</div>
-<h2 class="section">Laatst gebruikt</h2><div id="recent" class="row compact"></div>
+  <div class="ai" id="ai">
+    <div class="aihead">
+      <b>AI</b>
+      <div><small>Hallo Demi</small><h2>Hoe kan ik je vandaag helpen?</h2></div>
+      <button id="toggleAi">⌃</button>
+    </div>
+    <div class="aibody">
+      <input placeholder="Stel me een vraag...">
+      <div class="chips">
+        <button>Wat kan ik vandaag aantrekken?</button>
+        <button>Toon outfits met groen</button>
+        <button>Wat past goed bij beige?</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p>Bekijk en beheer je kleding</p><div class="photo closet"></div></button>
+    <button class="tile blue" data-screen="builder"><h3>Nieuwe outfit</h3><p>Stel een outfit samen</p><div class="photo builder"></div></button>
+    <button class="tile pink" data-screen="outfits"><h3>Outfits</h3><p>Bewaarde combinaties</p><div class="photo outfits"></div></button>
+    <button class="tile yellow" data-screen="purchase"><h3>Nieuwe aankoop</h3><p>Bewaar twijfels en ideeën</p><div class="photo purchase"></div></button>
+  </div>
+
+  <h2 class="section">Laatst gebruikt</h2>
+  <div id="recent" class="row compact"></div>
 </section>
 
 <section id="closet" class="screen">
-<div class="panel green"><h2>Mijn kast</h2><p>Voeg kleding toe per categorie. Elke foto wordt automatisch kleiner opgeslagen zodat je meerdere stuks kan bewaren.</p><button id="addCatCloset">Categorie toevoegen</button><button data-screen="settings" class="light">Beheer categorieën</button></div>
-<div class="closet-stats" id="closetStats"></div>
-<div id="closetContent"></div>
+  <div class="panel green">
+    <div class="panel-title">
+      <div>
+        <h2>Mijn kast</h2>
+        <p>Voeg kleding toe per categorie. Je beheert categorieën via het tandwiel.</p>
+      </div>
+      <button class="gear" id="closetSettingsBtn">⚙</button>
+    </div>
+  </div>
+  <div class="closet-stats" id="closetStats"></div>
+  <div id="closetContent"></div>
 </section>
 
-<section id="builder" class="screen"><div class="panel blue"><h2>Nieuwe outfit</h2><p>Tik op kledingstukken. Je outfit wordt bovenaan opgebouwd.</p><div class="stack"><div id="slot-tops">Top</div><div id="slot-bottoms">Onderstuk</div><div id="slot-shoes">Schoenen</div><div id="slot-bags">Tas</div></div><button id="saveOutfit">Outfit bewaren</button><button id="clearOutfit" class="light">Wissen</button></div><div id="builderRows"></div></section>
-<section id="outfits" class="screen"><div class="panel pink"><h2>Outfits</h2><p>Hier staan je bewaarde combinaties.</p></div><div id="saved"></div></section>
-<section id="purchase" class="screen"><div class="panel yellow"><h2>Nieuwe aankoop</h2><p>Bewaar foto's of screenshots van kleding waarover je twijfelt.</p></div><div class="sectionline"><h2>Twijfels</h2><button id="addPurchase">Foto toevoegen</button></div><input id="file-purchase" type="file" accept="image/*"><div id="purchaseList" class="row"></div></section>
-<section id="settings" class="screen"><div class="panel"><h2>Instellingen</h2><p>Beheer categorieën: toevoegen, hernoemen, verplaatsen of verwijderen.</p></div><button id="addCat">Nieuwe categorie toevoegen</button><div id="catList"></div></section>
+<section id="builder" class="screen">
+  <div class="panel blue">
+    <h2>Nieuwe outfit</h2>
+    <p>Tik op kledingstukken. Je outfit wordt bovenaan opgebouwd.</p>
+    <div class="stack">
+      <div id="slot-tops">Top</div>
+      <div id="slot-bottoms">Onderstuk</div>
+      <div id="slot-shoes">Schoenen</div>
+      <div id="slot-bags">Tas</div>
+    </div>
+    <button id="saveOutfit">Outfit bewaren</button>
+    <button id="clearOutfit" class="light">Wissen</button>
+  </div>
+  <div id="builderRows"></div>
+</section>
+
+<section id="outfits" class="screen">
+  <div class="panel pink"><h2>Outfits</h2><p>Hier staan je bewaarde combinaties.</p></div>
+  <div id="saved"></div>
+</section>
+
+<section id="purchase" class="screen">
+  <div class="panel yellow"><h2>Nieuwe aankoop</h2><p>Bewaar foto's of screenshots van kleding waarover je twijfelt.</p></div>
+  <div class="sectionline"><h2>Twijfels</h2><button id="addPurchase">Foto toevoegen</button></div>
+  <input id="file-purchase" type="file" accept="image/*">
+  <div id="purchaseList" class="row"></div>
+</section>
+
+<section id="settings" class="screen">
+  <div class="panel">
+    <h2>Instellingen</h2>
+    <p>Beheer categorieën, back-up en toekomstige cloudopslag.</p>
+  </div>
+  <div class="settings-grid">
+    <button class="setting-card" id="addCat">+ Nieuwe categorie</button>
+    <button class="setting-card" id="backupBtn">Back-up maken</button>
+    <button class="setting-card disabled">Cloudopslag binnenkort</button>
+  </div>
+  <h2 class="section">Categorieën</h2>
+  <div id="catList"></div>
+</section>
 </main>
-<nav><button class="nav active" data-screen="home">⌂<br>Home</button><button class="nav" data-screen="closet">⌒<br>Mijn kast</button><button class="nav" data-screen="builder">♙<br>Nieuwe outfit</button><button class="nav" data-screen="outfits">♡<br>Outfits</button><button class="nav" data-screen="purchase">☆<br>Nieuwe aankoop</button></nav>
-<script src="app.js"></script></body></html>
+
+<aside id="settingsDrawer" class="drawer">
+  <div class="drawer-card">
+    <div class="drawer-head">
+      <h2>Instellingen</h2>
+      <button id="closeDrawer">×</button>
+    </div>
+    <button class="drawer-option" id="drawerAddCat">Nieuwe categorie toevoegen</button>
+    <button class="drawer-option" data-screen="settings">Categorieën beheren</button>
+    <button class="drawer-option" id="drawerBackup">Back-up maken</button>
+    <div class="warning">
+      <strong>Belangrijk</strong>
+      <p>Foto’s staan nu lokaal in deze browser. Maak voorlopig nog niet je hele kast, tot cloudopslag klaar is.</p>
+    </div>
+  </div>
+</aside>
+
+<nav>
+  <button class="nav active" data-screen="home">⌂<br>Home</button>
+  <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
+  <button class="nav" data-screen="builder">♙<br>Nieuwe outfit</button>
+  <button class="nav" data-screen="outfits">♡<br>Outfits</button>
+  <button class="nav" data-screen="purchase">☆<br>Nieuwe aankoop</button>
+</nav>
+<script src="app.js"></script>
+</body>
+</html>
