@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.4</title>
+  <title>eCloset 1.5</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.4 — stabiele cloudversie</small>
+  <small>eCloset 1.5 — stabiele cloudversie</small>
 </header>
 
 <main>
@@ -114,14 +114,34 @@
 </aside>
 
 
+
+</div>
+
+
 <div id="photoModal" class="modal">
   <div class="modalCard">
     <button class="modalClose" id="closePhotoModal">×</button>
     <img id="modalImg" alt="">
     <h2 id="modalTitle">Kledingstuk</h2>
     <p id="modalMeta"></p>
+
+    <div class="editBlock">
+      <label>Naam</label>
+      <input id="modalNameInput" placeholder="bv. witte top">
+    </div>
+
+    <div class="editBlock">
+      <label>Kleur</label>
+      <div id="modalColorChoices" class="colorChoices"></div>
+    </div>
+
+    <div class="editBlock">
+      <label>Seizoen</label>
+      <div id="modalSeasonChoices" class="seasonChoices"></div>
+    </div>
+
     <div class="modalActions">
-      <button id="modalRename">Naam toevoegen/wijzigen</button>
+      <button id="modalSave">Opslaan</button>
       <button id="modalDelete" class="danger">Verwijderen</button>
     </div>
   </div>
