@@ -2,7 +2,7 @@ const SUPABASE_URL='https://znsyaiaahsgwxdjishdy.supabase.co';
 const SUPABASE_KEY='sb_publishable_LhX228oDFbuBZB4z2fFUPA_6ZdtTdbK';
 const BUCKET='clothes';
 
-const defaults=[
+const DEFAULT_CATEGORIES=[
   {id:'tops',name:'Tops',color:'#dcf4e6'},
   {id:'bottoms',name:'Broeken en rokken',color:'#d9ecff'},
   {id:'dresses',name:'Jurken',color:'#ffe1e9'},
@@ -12,39 +12,31 @@ const defaults=[
   {id:'accessories',name:'Accessoires',color:'#e8f0ff'}
 ];
 
-let data={};
+let categories=[];
+let items=[];
+let outfits=[];
 let selected={tops:null,bottoms:null,shoes:null,bags:null};
 
 function loadCategories(){
   try{
-    const saved=localStorage.getItem('ecloset_categories_v34');
+    const saved=localStorage.getItem('ecloset_categories_1');
     if(saved)return JSON.parse(saved);
   }catch(e){}
-  return defaults.map(c=>({...c}));
+  return DEFAULT_CATEGORIES.map(c=>({...c}));
 }
 
 function saveCategories(){
-  localStorage.setItem('ecloset_categories_v34',JSON.stringify(data.categories));
-}
-
-function prep(){
-  const savedCategories=loadCategories();
-  data={categories:savedCategories,purchase:[],outfits:[]};
-  data.categories.forEach(c=>{data[c.id]=[]});
-}
-
-function ensureCategory(id){
-  if(!data[id])data[id]=[];
+  localStorage.setItem('ecloset_categories_1',JSON.stringify(categories));
 }
 
 function setStatus(text,type=''){
-  let el=document.getElementById('cloudStatus');
+  const el=document.getElementById('cloudStatus');
   if(!el)return;
   el.textContent=text;
-  el.className='cloud-status '+type;
+  el.className='cloud '+type;
 }
 
-async function cloudFetch(path,options={}){
+async function api(path,options={}){
   const res=await fetch(SUPABASE_URL+path,{
     ...options,
     headers:{
@@ -63,112 +55,76 @@ async function cloudFetch(path,options={}){
 async function loadCloud(){
   try{
     setStatus('☁️ Cloud laden...');
-    const res=await cloudFetch('/rest/v1/clothing?select=*&order=created_at.desc');
-    const rows=await res.json();
+    const res=await api('/rest/v1/clothing?select=*&order=created_at.desc');
+    items=await res.json();
 
-    const savedCategories=loadCategories();
-    data={categories:savedCategories,purchase:[],outfits:[]};
-    data.categories.forEach(c=>data[c.id]=[]);
-
-    rows.forEach(row=>{
-      const cat=row.category||'tops';
-
-      // Als er cloudfoto's bestaan in een categorie die niet lokaal bestaat, maak die opnieuw zichtbaar.
-      if(!data.categories.find(c=>c.id===cat)){
-        data.categories.push({id:cat,name:cat,color:'#f1dfd2'});
-        data[cat]=[];
-        saveCategories();
+    // Toon onbekende categorieën toch, zodat foto's nooit "verdwijnen".
+    items.forEach(item=>{
+      const cat=item.category||'tops';
+      if(!categories.find(c=>c.id===cat)){
+        categories.push({id:cat,name:cat,color:'#f1dfd2'});
       }
-
-      ensureCategory(cat);
-      data[cat].push({
-        id:row.id,
-        src:row.image_url,
-        name:row.name||'',
-        cloudId:row.id,
-        brand:row.brand||'',
-        color:row.color||'',
-        season:row.season||'',
-        favorite:!!row.favorite,
-        notes:row.notes||''
-      });
     });
+    saveCategories();
 
-    setStatus('☁️ Cloud actief — '+rows.length+' kledingstuk(ken)', 'ok');
-    render();
+    setStatus('☁️ Cloud actief — '+items.length+' kledingstuk(ken)','ok');
+    renderAll();
   }catch(e){
     console.error(e);
-    setStatus('⚠️ Cloud laden mislukt. Check Supabase-instellingen.', 'err');
-    prep();
-    render();
+    setStatus('⚠️ Cloud laden mislukt','err');
+    renderAll();
   }
 }
 
 function resizeToBlob(file,maxSize=900,quality=.72){
-  return new Promise((ok,err)=>{
-    let reader=new FileReader();
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
     reader.onload=e=>{
-      let img=new Image();
+      const img=new Image();
       img.onload=()=>{
-        let w=img.width,h=img.height,s=Math.min(1,maxSize/Math.max(w,h));
-        w=Math.round(w*s);h=Math.round(h*s);
-        let c=document.createElement('canvas');
-        c.width=w;c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        c.toBlob(blob=>ok(blob),'image/jpeg',quality);
+        let w=img.width,h=img.height;
+        const scale=Math.min(1,maxSize/Math.max(w,h));
+        w=Math.round(w*scale); h=Math.round(h*scale);
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        canvas.toBlob(blob=>resolve(blob),'image/jpeg',quality);
       };
-      img.onerror=err;
+      img.onerror=reject;
       img.src=e.target.result;
     };
-    reader.onerror=err;
+    reader.onerror=reject;
     reader.readAsDataURL(file);
   });
 }
 
-function nav(screen){
-  closeDrawer();
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(screen).classList.add('active');
-  document.querySelectorAll('.nav').forEach(b=>b.classList.toggle('active',b.dataset.screen===screen));
-  scrollTo(0,0);
-  render();
-}
-
-function openDrawer(){document.getElementById('settingsDrawer').classList.add('open')}
-function closeDrawer(){document.getElementById('settingsDrawer').classList.remove('open')}
-function pick(cat){document.getElementById('file-'+cat)?.click()}
-
 async function uploadImage(file){
   const blob=await resizeToBlob(file);
   const filename='item-'+Date.now()+'-'+Math.random().toString(36).slice(2)+'.jpg';
-
-  await cloudFetch('/storage/v1/object/'+BUCKET+'/'+filename,{
+  await api('/storage/v1/object/'+BUCKET+'/'+filename,{
     method:'POST',
     headers:{'Content-Type':'image/jpeg','x-upsert':'true'},
     body:blob
   });
-
   return SUPABASE_URL+'/storage/v1/object/public/'+BUCKET+'/'+filename;
 }
 
-async function addPhotos(cat,files){
+async function addPhotos(category,files){
   const list=Array.from(files||[]);
   if(!list.length)return;
 
   let success=0;
-
   for(let i=0;i<list.length;i++){
     try{
       setStatus('☁️ Foto '+(i+1)+' van '+list.length+' uploaden...');
-      const imageUrl=await uploadImage(list[i]);
-
-      await cloudFetch('/rest/v1/clothing',{
+      const url=await uploadImage(list[i]);
+      await api('/rest/v1/clothing',{
         method:'POST',
         headers:{'Content-Type':'application/json','Prefer':'return=representation'},
         body:JSON.stringify({
-          category:cat,
+          category,
           name:'',
-          image_url:imageUrl,
+          image_url:url,
           brand:'',
           color:'',
           season:'',
@@ -176,26 +132,20 @@ async function addPhotos(cat,files){
           notes:''
         })
       });
-
       success++;
     }catch(e){
       console.error(e);
-      alert('Upload gestopt bij foto '+(i+1)+'. '+success+' foto(s) zijn wel opgeslagen.');
+      alert('Upload gestopt bij foto '+(i+1)+'. '+success+' foto(s) zijn opgeslagen.');
       break;
     }
   }
-
   await loadCloud();
 }
 
-async function addPhoto(cat,file){
-  return addPhotos(cat,file?[file]:[]);
-}
-
-async function delPhoto(cat,id){
+async function deleteItem(id){
   if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
   try{
-    await cloudFetch('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
+    await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
     await loadCloud();
   }catch(e){
     console.error(e);
@@ -203,15 +153,13 @@ async function delPhoto(cat,id){
   }
 }
 
-async function renamePhoto(cat,id){
-  let p=data[cat].find(x=>x.id===id);
-  if(!p)return;
-
-  let name=prompt('Nieuwe naam?',p.name||'');
+async function renameItem(id){
+  const item=items.find(x=>x.id===id);
+  if(!item)return;
+  const name=prompt('Naam van kledingstuk?',item.name||'');
   if(name===null)return;
-
   try{
-    await cloudFetch('/rest/v1/clothing?id=eq.'+id,{
+    await api('/rest/v1/clothing?id=eq.'+id,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name})
@@ -222,127 +170,106 @@ async function renamePhoto(cat,id){
   }
 }
 
-function select(cat,p,card){
-  if(!(cat in selected))return;
-  selected[cat]=p.id;
-  document.getElementById('slot-'+cat).innerHTML='<img src="'+p.src+'">';
-  document.querySelectorAll('[data-row="'+cat+'"] .item').forEach(i=>i.classList.remove('active'));
-  card.classList.add('active');
+function navigate(screen){
+  closeDrawer();
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(screen).classList.add('active');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
+  window.scrollTo(0,0);
+  renderAll();
 }
 
-function clearOutfit(){
-  selected={tops:null,bottoms:null,shoes:null,bags:null};
-  Object.entries({tops:'Top',bottoms:'Onderstuk',shoes:'Schoenen',bags:'Tas'}).forEach(([k,v])=>{
-    document.getElementById('slot-'+k).textContent=v;
-  });
-  document.querySelectorAll('.item.active').forEach(i=>i.classList.remove('active'));
+function openDrawer(){document.getElementById('drawer').classList.add('open')}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open')}
+function pick(category){document.getElementById('file-'+category)?.click()}
+
+function itemsFor(category){
+  return items.filter(item=>(item.category||'tops')===category);
 }
 
-function saveOutfit(){
-  if(!Object.values(selected).some(Boolean)){
-    alert('Kies eerst minstens één kledingstuk.');
-    return;
+function createCard(item,selectable=false,closet=false){
+  const card=document.createElement('article');
+  card.className='item';
+
+  const img=document.createElement('img');
+  img.src=item.image_url;
+  if(selectable){
+    img.onclick=()=>{
+      selected[item.category]=item.id;
+      const slot=document.getElementById('slot-'+item.category);
+      if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
+      document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
+      card.classList.add('active');
+    };
   }
-  data.outfits.push({id:Date.now(),date:new Date().toLocaleDateString('nl-BE'),items:{...selected}});
-  alert('Outfit bewaard');
-}
+  card.appendChild(img);
 
-function findImg(id){
-  for(let c of data.categories){
-    let m=(data[c.id]||[]).find(p=>p.id===id);
-    if(m)return m.src;
-  }
-  return null;
-}
-
-function card(cat,p,sel,closet=false){
-  let d=document.createElement('article');
-  d.className='item';
-
-  let img=document.createElement('img');
-  img.src=p.src;
-  if(sel)img.onclick=()=>select(cat,p,d);
-  d.append(img);
-
-  if(p.name){
-    let n=document.createElement('div');
-    n.className='item-name';
-    n.textContent=p.name;
-    d.append(n);
+  if(item.name){
+    const name=document.createElement('div');
+    name.className='itemName';
+    name.textContent=item.name;
+    card.appendChild(name);
   }
 
   if(closet){
-    let rename=document.createElement('button');
+    const rename=document.createElement('button');
     rename.className='delete';
     rename.textContent='Naam';
-    rename.onclick=()=>renamePhoto(cat,p.id);
-    d.append(rename);
+    rename.onclick=()=>renameItem(item.id);
+    card.appendChild(rename);
   }
 
-  let b=document.createElement('button');
-  b.className='delete';
-  b.textContent='Verwijder';
-  b.onclick=()=>delPhoto(cat,p.id);
-  d.append(b);
+  const del=document.createElement('button');
+  del.className='delete';
+  del.textContent='Verwijder';
+  del.onclick=()=>deleteItem(item.id);
+  card.appendChild(del);
 
-  return d;
+  return card;
 }
 
-function row(cat,sel,closet=false){
-  let r=document.createElement('div');
-  r.className='row'+(closet?' closetrow':'');
-  r.dataset.row=cat;
+function createRow(category,selectable=false,closet=false){
+  const row=document.createElement('div');
+  row.className='row '+(closet?'closetRow':'');
+  row.dataset.row=category;
+  const list=itemsFor(category);
 
-  if(!data[cat]?.length){
-    let e=document.createElement('div');
-    e.className='empty';
-    e.textContent='Nog geen foto’s';
-    r.append(e);
+  if(!list.length){
+    const empty=document.createElement('div');
+    empty.className='empty';
+    empty.textContent='Nog geen foto’s';
+    row.appendChild(empty);
   }else{
-    data[cat].forEach(p=>r.append(card(cat,p,sel,closet)));
+    list.forEach(item=>row.appendChild(createCard(item,selectable,closet)));
   }
-
-  return r;
-}
-
-function render(){
-  renderStats();
-  renderCloset();
-  renderBuilder();
-  renderPurchase();
-  renderSaved();
-  renderRecent();
-  renderCats();
+  return row;
 }
 
 function renderStats(){
-  let total=data.categories.reduce((sum,c)=>sum+((data[c.id]||[]).length),0);
-  document.getElementById('closetStats').innerHTML='<div class="stat"><strong>'+total+'</strong><span>kledingstukken in cloud</span></div><div class="stat"><strong>'+data.categories.length+'</strong><span>categorieën</span></div>';
+  document.getElementById('stats').innerHTML=
+    '<div class="stat"><strong>'+items.length+'</strong><span>kledingstukken in cloud</span></div>'+
+    '<div class="stat"><strong>'+categories.length+'</strong><span>categorieën</span></div>';
 }
 
 function renderCloset(){
-  let c=document.getElementById('closetContent');
-  c.innerHTML='';
+  const container=document.getElementById('closetContent');
+  container.innerHTML='';
 
-  data.categories.forEach(cat=>{
-    ensureCategory(cat.id);
+  categories.forEach(cat=>{
+    const block=document.createElement('section');
+    block.className='catBlock';
 
-    let block=document.createElement('section');
-    block.className='cat-block';
+    const top=document.createElement('div');
+    top.className='catTop';
 
-    let h=document.createElement('div');
-    h.className='cat-top';
+    const left=document.createElement('div');
+    left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
 
-    let left=document.createElement('div');
-    left.innerHTML='<h2>'+cat.name+'</h2><div class="cat-count">'+((data[cat.id]||[]).length)+' stuk(s)</div>';
+    const btn=document.createElement('button');
+    btn.textContent='Foto toevoegen';
+    btn.onclick=()=>pick(cat.id);
 
-    let b=document.createElement('button');
-    b.textContent='Foto toevoegen';
-    b.onclick=()=>pick(cat.id);
-
-    h.append(left,b);
-
-    let input=document.createElement('input');
+    const input=document.createElement('input');
     input.type='file';
     input.accept='image/*';
     input.multiple=true;
@@ -352,198 +279,196 @@ function renderCloset(){
       e.target.value='';
     };
 
-    block.append(h,input,row(cat.id,false,true));
-    c.append(block);
+    top.append(left,btn);
+    block.append(top,input,createRow(cat.id,false,true));
+    container.appendChild(block);
   });
 }
 
 function renderBuilder(){
-  let c=document.getElementById('builderRows');
-  c.innerHTML='';
-
+  const container=document.getElementById('builderContent');
+  container.innerHTML='';
   ['tops','bottoms','shoes','bags'].forEach(id=>{
-    let cat=data.categories.find(x=>x.id===id);
+    const cat=categories.find(c=>c.id===id);
     if(!cat)return;
-
-    let h=document.createElement('h2');
-    h.className='section';
-    h.textContent=cat.name;
-    c.append(h,row(id,true,false));
+    const title=document.createElement('h2');
+    title.className='section';
+    title.textContent=cat.name;
+    container.append(title,createRow(id,true,false));
   });
-}
-
-function renderPurchase(){
-  let c=document.getElementById('purchaseList');
-  c.innerHTML='';
-  let e=document.createElement('div');
-  e.className='empty';
-  e.textContent='Nieuwe aankoop cloud volgt later';
-  c.append(e);
-}
-
-function renderSaved(){
-  let c=document.getElementById('saved');
-  c.innerHTML='';
-
-  if(!data.outfits.length){
-    let e=document.createElement('div');
-    e.className='empty';
-    e.textContent='Nog geen outfits bewaard';
-    c.append(e);
-    return;
-  }
 }
 
 function renderRecent(){
-  let c=document.getElementById('recent');
-  c.innerHTML='';
-
-  let imgs=[];
-  data.categories.forEach(cat=>(data[cat.id]||[]).slice(0,1).forEach(p=>imgs.push(p.src)));
-
-  if(!imgs.length){
+  const container=document.getElementById('recent');
+  container.innerHTML='';
+  const recent=items.slice(0,4);
+  if(!recent.length){
     ['Werk outfit','Weekend','Date night','Zondag casual'].forEach(t=>{
-      let e=document.createElement('div');
+      const e=document.createElement('div');
       e.className='empty';
       e.style.minWidth='220px';
       e.textContent=t;
-      c.append(e);
+      container.appendChild(e);
     });
   }else{
-    imgs.slice(0,4).forEach(src=>{
-      let it=document.createElement('article');
-      it.className='item active';
-      it.innerHTML='<img src="'+src+'">';
-      c.append(it);
+    recent.forEach(item=>{
+      const c=document.createElement('article');
+      c.className='item active';
+      c.innerHTML='<img src="'+item.image_url+'">';
+      container.appendChild(c);
     });
   }
 }
 
-function renderCats(){
-  let c=document.getElementById('catList');
+function renderPurchase(){
+  const c=document.getElementById('purchaseContent');
+  c.innerHTML='';
+  const e=document.createElement('div');
+  e.className='empty';
+  e.textContent='Nieuwe aankoop volgt in de volgende stap';
+  c.appendChild(e);
+}
+
+function renderOutfits(){
+  const c=document.getElementById('savedOutfits');
+  c.innerHTML='';
+  const e=document.createElement('div');
+  e.className='empty';
+  e.textContent='Nog geen outfits bewaard';
+  c.appendChild(e);
+}
+
+function renderCategories(){
+  const c=document.getElementById('categoryList');
   c.innerHTML='';
 
-  data.categories.forEach((cat,i)=>{
-    let r=document.createElement('div');
-    r.className='catrow';
-    r.innerHTML='<div class="catleft"><span class="dot" style="background:'+cat.color+'"></span>'+cat.name+'</div>';
+  categories.forEach((cat,index)=>{
+    const row=document.createElement('div');
+    row.className='catrow';
+    row.innerHTML='<div class="catleft"><span class="dot" style="background:'+cat.color+'"></span>'+cat.name+'</div>';
 
-    let a=document.createElement('div');
-    a.className='catactions';
+    const actions=document.createElement('div');
+    actions.className='catactions';
 
     [
-      ['Naam',()=>renameCat(cat.id)],
-      ['↑',()=>moveCat(i,-1)],
-      ['↓',()=>moveCat(i,1)],
-      ['Verwijder',()=>deleteCat(cat.id)]
-    ].forEach(x=>{
-      let b=document.createElement('button');
+      ['Naam',()=>renameCategory(cat.id)],
+      ['↑',()=>moveCategory(index,-1)],
+      ['↓',()=>moveCategory(index,1)],
+      ['Verwijder',()=>deleteCategory(cat.id)]
+    ].forEach(([label,fn])=>{
+      const b=document.createElement('button');
       b.className='mini';
-      b.textContent=x[0];
-      b.onclick=x[1];
-      a.append(b);
+      b.textContent=label;
+      b.onclick=fn;
+      actions.appendChild(b);
     });
 
-    r.append(a);
-    c.append(r);
+    row.appendChild(actions);
+    c.appendChild(row);
   });
 }
 
-function addCat(){
-  let name=prompt('Naam van nieuwe categorie?');
+function addCategory(){
+  const name=prompt('Naam van nieuwe categorie?');
   if(!name)return;
-
-  let colors=['#d9ecff','#dcf4e6','#ffe1e9','#fff0c9','#eadfff','#f1dfd2'];
-  let id='cat_'+Date.now();
-
-  data.categories.push({id,name,color:colors[data.categories.length%colors.length]});
-  data[id]=[];
+  const colors=['#d9ecff','#dcf4e6','#ffe1e9','#fff0c9','#eadfff','#f1dfd2'];
+  categories.push({id:'cat_'+Date.now(),name,color:colors[categories.length%colors.length]});
   saveCategories();
-  render();
+  renderAll();
   closeDrawer();
 }
 
-function renameCat(id){
-  let c=data.categories.find(x=>x.id===id);
-  if(!c)return;
-
-  let name=prompt('Nieuwe naam?',c.name);
-  if(!name)return;
-
-  c.name=name;
-  saveCategories();
-  render();
-}
-
-function moveCat(i,d){
-  let n=i+d;
-  if(n<0||n>=data.categories.length)return;
-
-  [data.categories[i],data.categories[n]]=[data.categories[n],data.categories[i]];
-  saveCategories();
-  render();
-}
-
-function deleteCat(id){
-  let cat=data.categories.find(c=>c.id===id);
+function renameCategory(id){
+  const cat=categories.find(c=>c.id===id);
   if(!cat)return;
+  const name=prompt('Nieuwe naam?',cat.name);
+  if(!name)return;
+  cat.name=name;
+  saveCategories();
+  renderAll();
+}
 
-  let count=(data[id]||[]).length;
+function moveCategory(index,dir){
+  const next=index+dir;
+  if(next<0||next>=categories.length)return;
+  [categories[index],categories[next]]=[categories[next],categories[index]];
+  saveCategories();
+  renderAll();
+}
+
+function deleteCategory(id){
+  const cat=categories.find(c=>c.id===id);
+  if(!cat)return;
+  const count=itemsFor(id).length;
   if(count>0){
-    alert('Deze categorie bevat nog '+count+' foto(\\'s). Verwijder die eerst, zodat je niets per ongeluk kwijt bent.');
+    alert('Deze categorie bevat nog '+count+' foto(\'s). Verwijder die eerst, zodat je niets per ongeluk kwijt bent.');
     return;
   }
-
   if(!confirm('Categorie "'+cat.name+'" verwijderen?'))return;
-
-  data.categories=data.categories.filter(c=>c.id!==id);
-  delete data[id];
+  categories=categories.filter(c=>c.id!==id);
   saveCategories();
-  render();
+  renderAll();
 }
 
-function backup(){
-  let blob=new Blob([JSON.stringify(data)],{type:'application/json'});
-  let a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download='ecloset-backup.json';
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+function saveOutfit(){
+  if(!Object.values(selected).some(Boolean)){
+    alert('Kies eerst minstens één kledingstuk.');
+    return;
+  }
+  alert('Outfits bewaren werken we in de volgende stap verder af.');
 }
 
-async function start(){
-  prep();
+function clearOutfit(){
+  selected={tops:null,bottoms:null,shoes:null,bags:null};
+  Object.entries({tops:'Top',bottoms:'Onderstuk',shoes:'Schoenen',bags:'Tas'}).forEach(([id,label])=>{
+    document.getElementById('slot-'+id).textContent=label;
+  });
+  document.querySelectorAll('.item.active').forEach(c=>c.classList.remove('active'));
+}
 
-  document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>nav(b.dataset.screen));
+function renderAll(){
+  renderStats();
+  renderCloset();
+  renderBuilder();
+  renderRecent();
+  renderPurchase();
+  renderOutfits();
+  renderCategories();
+}
+
+function bindEvents(){
+  document.querySelectorAll('[data-screen]').forEach(btn=>{
+    btn.onclick=()=>navigate(btn.dataset.screen);
+  });
+
   document.getElementById('settingsBtn').onclick=openDrawer;
-  document.getElementById('closetSettingsBtn').onclick=openDrawer;
+  document.getElementById('closetGear').onclick=openDrawer;
   document.getElementById('closeDrawer').onclick=closeDrawer;
 
   document.getElementById('toggleAi').onclick=()=>{
-    let a=document.getElementById('ai');
-    a.classList.toggle('closed');
-    document.getElementById('toggleAi').textContent=a.classList.contains('closed')?'⌄':'⌃';
+    const box=document.getElementById('aiBox');
+    box.classList.toggle('closed');
+    document.getElementById('toggleAi').textContent=box.classList.contains('closed')?'⌄':'⌃';
   };
 
-  document.getElementById('addCat').onclick=addCat;
-  document.getElementById('drawerAddCat').onclick=addCat;
+  document.getElementById('addCategory').onclick=addCategory;
+  document.getElementById('drawerAddCategory').onclick=addCategory;
   document.getElementById('refreshCloud').onclick=loadCloud;
   document.getElementById('drawerRefresh').onclick=loadCloud;
-  document.getElementById('backupBtn').onclick=backup;
-  document.getElementById('drawerBackup').onclick=backup;
   document.getElementById('saveOutfit').onclick=saveOutfit;
   document.getElementById('clearOutfit').onclick=clearOutfit;
+
   document.getElementById('addPurchase').onclick=()=>pick('purchase');
+  document.getElementById('file-purchase').onchange=e=>{
+    addPhotos('purchase',e.target.files);
+    e.target.value='';
+  };
+}
 
-  const purchase=document.getElementById('file-purchase');
-  if(purchase){
-    purchase.multiple=true;
-    purchase.onchange=e=>{
-      addPhotos('purchase',e.target.files);
-      e.target.value='';
-    };
-  }
-
+async function start(){
+  categories=loadCategories();
+  bindEvents();
+  renderAll();
   await loadCloud();
 }
 
