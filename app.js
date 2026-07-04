@@ -241,44 +241,51 @@ async function addPhotos(category,files){
 async function deleteItem(id){
   if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
   try{
-    saveScrollPositions();
     await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
     closePhotoModal();
     await loadCloud();
-    restoreScrollPositions();
   }catch(e){
     console.error(e);
     alert('Verwijderen mislukt.');
   }
 }
 
+
+function showSavedHint(){
+  const old=document.querySelector('.savedHint');
+  if(old)old.remove();
+  const div=document.createElement('div');
+  div.className='savedHint';
+  div.textContent='Opgeslagen';
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),1100);
+}
+
+function updateLocalItem(id,changes){
+  const item=items.find(x=>x.id===id);
+  if(item)Object.assign(item,changes);
+}
+
 async function saveModalItem(){
   if(!currentModalItem)return;
-  const editingId=currentModalItem.id;
+  const id=currentModalItem.id;
   const name=(safeGet('modalName')?.value||'').trim();
   const favorite=!!safeGet('modalFav')?.checked;
+  const newColor=colorString(modalColorsList);
+  const newSeason=modalSeason;
+
   try{
-    saveScrollPositions();
-    await api('/rest/v1/clothing?id=eq.'+editingId,{
+    await api('/rest/v1/clothing?id=eq.'+id,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,color:colorString(modalColorsList),season:modalSeason,favorite})
+      body:JSON.stringify({name,color:newColor,season:newSeason,favorite})
     });
-    await loadCloud();
-    restoreScrollPositions();
 
-    const updated=items.find(x=>x.id===editingId);
-    if(updated){
-      currentModalItem=updated;
-      modalColorsList=normalizeColors(updated.color);
-      modalSeason=updated.season||'';
-      safeGet('modalTitle').textContent=updated.name||'Naamloos kledingstuk';
-      safeGet('modalName').value=updated.name||'';
-      safeGet('modalFav').checked=!!updated.favorite;
-      renderModalColors();
-      renderModalSeasons();
-      safeGet('photoModal')?.classList.add('open');
-    }
+    updateLocalItem(id,{name,color:newColor,season:newSeason,favorite});
+    currentModalItem=items.find(x=>x.id===id)||currentModalItem;
+
+    // Alleen tekst in modal aanpassen, geen volledige herlaad van de lijst.
+    safeGet('modalTitle').textContent=name||'Naamloos kledingstuk';
     showSavedHint();
   }catch(e){
     console.error(e);
@@ -295,7 +302,7 @@ function navigate(screen){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
   window.scrollTo(0,0);
   renderAll();
-  setTimeout(updateCenterCards,180);
+  setTimeout(updateCenterCards,80);
 }
 
 function openDrawer(){safeGet('drawer')?.classList.add('open')}
@@ -399,15 +406,7 @@ function createRow(category,selectable=false,closet=false){
   }else{
     list.forEach(item=>row.appendChild(createCard(item,selectable)));
   }
-  row.addEventListener('scroll',()=>{
-    row.classList.add('isScrolling');
-    const key=row.dataset.row||Math.random().toString();
-    clearTimeout(scrollTimers[key]);
-    scrollTimers[key]=setTimeout(()=>{
-      row.classList.remove('isScrolling');
-      updateCenterCards();
-    },140);
-  });
+  
   return row;
 }
 
@@ -665,38 +664,9 @@ function renderModalSeasons(){
   });
 }
 
-
-let scrollMemory={};
-let scrollTimers={};
-
-function saveScrollPositions(){
-  scrollMemory={};
-  document.querySelectorAll('.row[data-row]').forEach(row=>{
-    scrollMemory[row.dataset.row]=row.scrollLeft;
-  });
-}
-
-function restoreScrollPositions(){
-  document.querySelectorAll('.row[data-row]').forEach(row=>{
-    const value=scrollMemory[row.dataset.row];
-    if(typeof value==='number')row.scrollLeft=value;
-  });
-  setTimeout(updateCenterCards,120);
-}
-
-function showSavedHint(){
-  const old=document.querySelector('.savedHint');
-  if(old)old.remove();
-  const div=document.createElement('div');
-  div.className='savedHint';
-  div.textContent='Opgeslagen';
-  document.body.appendChild(div);
-  setTimeout(()=>div.remove(),1200);
-}
-
 function updateCenterCards(){
+  // Lichtgewicht: alleen markeren na render, niet continu tijdens scroll.
   document.querySelectorAll('.row').forEach(row=>{
-    if(row.classList.contains('isScrolling'))return;
     const cards=[...row.querySelectorAll('.item')];
     if(!cards.length)return;
     const box=row.getBoundingClientRect();
@@ -780,7 +750,7 @@ function renderAll(){
   renderPurchase();
   renderOutfits();
   renderCategories();
-  setTimeout(updateCenterCards,180);
+  setTimeout(updateCenterCards,80);
 }
 
 function bindEvents(){
@@ -821,7 +791,7 @@ function bindEvents(){
     if(currentModalItem)deleteItem(currentModalItem.id);
   };
 
-  document.addEventListener('scroll',()=>setTimeout(updateCenterCards,20),true);
+  
 }
 
 async function start(){
