@@ -957,3 +957,23 @@
   text-align:center;
   padding:8px;
 }
+
+/* 2.12: outfit preview is vaste collage, geen selectie meer */
+.outfitPreviewCard{
+  cursor:default!important;
+}
+.outfitPreviewCard.selectedForBg,
+.outfitPreviewCard.bgProcessed{
+  border:1px solid var(--line)!important;
+  box-shadow:none!important;
+}
+.outfitPreviewCard.selectedForBg::after{
+  display:none!important;
+}
+.bgTestSmall{
+  display:none!important;
+}
+#testOutfitBackgrounds,
+#bgTestStatus{
+  display:none!important;
+}
