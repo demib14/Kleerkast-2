@@ -42,62 +42,37 @@ let lockedOutfit={};
 let currentModalItem=null;
 let modalColorsList=[];
 let modalSeason='';
-let colorFilters={};
-let openFilterPanels={};
 
 function safeGet(id){return document.getElementById(id)}
 
 function loadCategories(){
-  const keys=[
-    'ecloset_categories_master',
-    'ecloset_categories_fix',
-    'ecloset_categories_1',
-    'ecloset_categories_v34',
-    'ecloset_categories_v2'
-  ];
-
-  let best=null;
+  const keys=['ecloset_categories_master','ecloset_categories_fix','ecloset_categories_1','ecloset_categories_v34'];
   for(const key of keys){
     try{
       const saved=localStorage.getItem(key);
-      if(!saved)continue;
-      const parsed=JSON.parse(saved);
-      if(Array.isArray(parsed) && parsed.length){
-        // Kies de eerste bestaande lijst die niet leeg is.
-        best=parsed;
-        break;
+      if(saved){
+        const parsed=JSON.parse(saved);
+        if(Array.isArray(parsed)&&parsed.length){
+          localStorage.setItem('ecloset_categories_master',JSON.stringify(parsed));
+          return parsed;
+        }
       }
     }catch(e){}
   }
-
-  if(!best)best=DEFAULT_CATEGORIES.map(c=>({...c}));
-
-  // Vanaf nu altijd dezelfde vaste sleutel gebruiken.
-  localStorage.setItem('ecloset_categories_master',JSON.stringify(best));
-  return best;
+  return DEFAULT_CATEGORIES.map(c=>({...c}));
 }
 
 function saveCategories(){
   localStorage.setItem('ecloset_categories_master',JSON.stringify(categories));
 }
 
-function loadColorFilters(){
-  try{
-    const saved=localStorage.getItem('ecloset_color_filters');
-    if(saved)return JSON.parse(saved);
-  }catch(e){}
-  return {};
-}
-
-function saveColorFilters(){
-  localStorage.setItem('ecloset_color_filters',JSON.stringify(colorFilters));
-}
-
 function setStatus(text,type=''){
   const el=safeGet('cloudStatus');
-  if(!el)return;
-  el.textContent=text;
-  el.className='cloud '+type;
+  if(el){
+    el.textContent=text;
+    el.className='cloud '+type;
+  }
+  updateHomeStat();
 }
 
 async function api(path,options={}){
@@ -254,90 +229,6 @@ async function addPhotos(category,files){
   await loadCloud();
 }
 
-async function deleteItem(id){
-  if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
-  try{
-    await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
-    closePhotoModal();
-    await loadCloud();
-  }catch(e){
-    console.error(e);
-    alert('Verwijderen mislukt.');
-  }
-}
-
-
-function showSavedHint(){
-  const old=document.querySelector('.savedHint');
-  if(old)old.remove();
-  const div=document.createElement('div');
-  div.className='savedHint';
-  div.textContent='Opgeslagen';
-  document.body.appendChild(div);
-  setTimeout(()=>div.remove(),1100);
-}
-
-function updateLocalItem(id,changes){
-  const item=items.find(x=>x.id===id);
-  if(item)Object.assign(item,changes);
-}
-
-async function saveModalItem(){
-  if(!currentModalItem)return;
-  const id=currentModalItem.id;
-  const name=(safeGet('modalName')?.value||'').trim();
-  const favorite=!!safeGet('modalFav')?.checked;
-  const newColor=colorString(modalColorsList);
-  const newSeason=modalSeason;
-
-  try{
-    await api('/rest/v1/clothing?id=eq.'+id,{
-      method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name,color:newColor,season:newSeason,favorite})
-    });
-
-    updateLocalItem(id,{name,color:newColor,season:newSeason,favorite});
-    currentModalItem=items.find(x=>x.id===id)||currentModalItem;
-    updateVisibleItemCard(currentModalItem);
-
-    // Alleen tekst in modal aanpassen, geen volledige herlaad van de lijst.
-    safeGet('modalTitle').textContent=name||'Naamloos kledingstuk';
-    showSavedHint();
-  }catch(e){
-    console.error(e);
-    alert('Opslaan mislukt.');
-  }
-}
-
-function navigate(screen){
-  closeDrawer();
-  localStorage.setItem('ecloset_last_screen',screen);
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  const target=safeGet(screen);
-  if(target)target.classList.add('active');
-  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
-  window.scrollTo(0,0);
-  renderAll();
-  updateLockButtons();
-  setTimeout(updateCenterCards,80);
-}
-
-function openDrawer(){safeGet('drawer')?.classList.add('open')}
-function closeDrawer(){safeGet('drawer')?.classList.remove('open')}
-function pick(category){safeGet('file-'+category)?.click()}
-
-function itemsFor(category){
-  let list=items.filter(item=>(item.category||'tops')===category);
-  const active=colorFilters[category];
-  if(active)list=list.filter(item=>normalizeColors(item.color).includes(active));
-  return list;
-}
-
-function allItemsFor(category){
-  return items.filter(item=>(item.category||'tops')===category);
-}
-
 function normalizeColors(value){
   if(Array.isArray(value))return value.filter(Boolean);
   if(!value)return [];
@@ -358,8 +249,93 @@ function seasonLabel(id){
   return s?s.label:id;
 }
 
+function itemsFor(category){
+  return items.filter(item=>(item.category||'tops')===category);
+}
 
-function buildBadges(item){
+function categoryName(id){
+  const c=categories.find(x=>x.id===id);
+  return c?c.name:id;
+}
+
+function toggleLockItem(item){
+  const cat=item.category||'tops';
+  if(lockedOutfit[cat]&&String(lockedOutfit[cat].id)===String(item.id)){
+    delete lockedOutfit[cat];
+  }else{
+    lockedOutfit[cat]=item;
+  }
+  renderAll();
+}
+
+function updateFloatingSave(){
+  const btn=safeGet('floatingSaveOutfit');
+  if(!btn)return;
+  const count=Object.keys(lockedOutfit).length;
+  btn.classList.toggle('hidden',count===0);
+  btn.textContent=count?'Outfit bewaren ('+count+')':'Outfit bewaren';
+}
+
+function saveLockedOutfit(){
+  const locked=Object.values(lockedOutfit);
+  if(!locked.length){
+    alert('Zet eerst minstens één kledingstuk vast.');
+    return;
+  }
+  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+  saved.push({
+    id:Date.now(),
+    date:new Date().toLocaleDateString('nl-BE'),
+    items:Object.fromEntries(Object.entries(lockedOutfit).map(([cat,item])=>[cat,item.id]))
+  });
+  localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
+  window.savedOutfits=saved;
+  alert('Outfit bewaard');
+  lockedOutfit={};
+  renderAll();
+}
+
+function createCard(item,selectable=false,closet=false,pinned=false){
+  const card=document.createElement('article');
+  card.className='item';
+  if(pinned)card.classList.add('pinnedItem');
+  card.dataset.itemId=item.id;
+
+  const img=document.createElement('img');
+  img.src=item.image_url;
+  img.onclick=()=>{
+    if(selectable){
+      selected[item.category]=item.id;
+      const slot=safeGet('slot-'+item.category);
+      if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
+      document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
+      card.classList.add('active');
+    }else{
+      openPhotoModal(item);
+    }
+  };
+  card.appendChild(img);
+
+  if(closet){
+    const lock=document.createElement('button');
+    const cat=item.category||'tops';
+    const isLocked=lockedOutfit[cat]&&String(lockedOutfit[cat].id)===String(item.id);
+    lock.className='lockBtn '+(isLocked?'locked':'');
+    lock.textContent=isLocked?'✓':'＋';
+    lock.onclick=(event)=>{
+      event.stopPropagation();
+      toggleLockItem(item);
+    };
+    card.appendChild(lock);
+  }
+
+  if(item.name){
+    const name=document.createElement('div');
+    name.className='itemName';
+    name.textContent=item.name;
+    card.appendChild(name);
+  }
+
   const badges=document.createElement('div');
   badges.className='itemBadges';
 
@@ -384,146 +360,27 @@ function buildBadges(item){
     badges.appendChild(fav);
   }
 
-  return badges;
-}
-
-function updateVisibleItemCard(item){
-  document.querySelectorAll('[data-item-id="'+item.id+'"]').forEach(card=>{
-    card.querySelectorAll('.itemName,.itemBadges').forEach(el=>el.remove());
-
-    const img=card.querySelector('img');
-    if(item.name){
-      const name=document.createElement('div');
-      name.className='itemName';
-      name.textContent=item.name;
-      if(img && img.nextSibling){
-        card.insertBefore(name,img.nextSibling);
-      }else{
-        card.appendChild(name);
-      }
-    }
-
-    const badges=buildBadges(item);
-    if(badges.children.length)card.appendChild(badges);
-  });
-}
-
-
-function categoryName(id){
-  const c=(typeof categories!=='undefined'?categories:[]).find(x=>x.id===id);
-  return c ? c.name : id;
-}
-
-function toggleLockItem(item){
-  const cat=item.category||'tops';
-  if(lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id)){
-    delete lockedOutfit[cat];
-  }else{
-    lockedOutfit[cat]=item;
-  }
-  renderLockedOutfitBar();
-  updateLockButtons();
-}
-
-function updateLockButtons(){
-  document.querySelectorAll('.lockBtn').forEach(btn=>{
-    const id=btn.dataset.itemId;
-    const item=items.find(x=>String(x.id)===String(id));
-    if(!item)return;
-    const cat=item.category||'tops';
-    const isLocked=lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id);
-    btn.classList.toggle('locked',isLocked);
-    btn.textContent=isLocked?'✓':'＋';
-  });
-}
-
-function renderLockedOutfitBar(){
-  const btn=document.getElementById('floatingSaveOutfit');
-  if(!btn)return;
-  const count=Object.keys(lockedOutfit).length;
-  btn.classList.toggle('hidden',count===0);
-  btn.textContent=count ? 'Outfit bewaren ('+count+')' : 'Outfit bewaren';
-}
-
-function clearLockedOutfit(){
-  lockedOutfit={};
-  renderLockedOutfitBar();
-  updateLockButtons();
-}
-
-function saveLockedOutfit(){
-  const locked=Object.values(lockedOutfit);
-  if(!locked.length){
-    alert('Zet eerst minstens één kledingstuk vast.');
-    return;
-  }
-  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
-  saved.push({
-    id:Date.now(),
-    date:new Date().toLocaleDateString('nl-BE'),
-    items:Object.fromEntries(Object.entries(lockedOutfit).map(([cat,item])=>[cat,item.id]))
-  });
-  localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
-  window.savedOutfits=saved;
-  alert('Outfit bewaard');
-  clearLockedOutfit();
-  renderAll();
-}
-
-function createCard(item,selectable=false,closet=false){
-  const card=document.createElement('article');
-  card.className='item';
-  card.dataset.itemId=item.id;
-  card.dataset.itemId=item.id;
-  const img=document.createElement('img');
-  img.src=item.image_url;
-  img.onclick=()=>{
-    if(selectable){
-      selected[item.category]=item.id;
-      const slot=safeGet('slot-'+item.category);
-      if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
-      document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
-      card.classList.add('active');
-    }else{
-      openPhotoModal(item);
-    }
-  };
-  card.appendChild(img);
-
-  if(closet){
-    const lock=document.createElement('button');
-    lock.className='lockBtn';
-    lock.dataset.itemId=item.id;
-    lock.textContent='＋';
-    lock.onclick=(event)=>{
-      event.stopPropagation();
-      toggleLockItem(item);
-    };
-    card.appendChild(lock);
-  }
-
-  if(item.name){
-    const name=document.createElement('div');
-    name.className='itemName';
-    name.textContent=item.name;
-    card.appendChild(name);
-  }
-  const badges=buildBadges(item);
   if(badges.children.length)card.appendChild(badges);
+
+  if(pinned){
+    const tag=document.createElement('span');
+    tag.className='pinnedTag';
+    tag.textContent='vastgezet';
+    card.appendChild(tag);
+  }
+
   return card;
 }
 
 function createRow(category,selectable=false,closet=false){
   const row=document.createElement('div');
-  const locked=lockedOutfit && lockedOutfit[category];
+  const locked=lockedOutfit[category];
   row.className='row '+(closet?'closetRow ':'')+(locked?'lockedRow':'');
   row.dataset.row=category;
 
   let list=itemsFor(category);
-
   if(locked){
-    const lockedId=String(locked.id);
-    list=[locked].concat(list.filter(item=>String(item.id)!==lockedId));
+    list=[locked,...list.filter(item=>String(item.id)!==String(locked.id))];
   }
 
   if(!list.length){
@@ -533,15 +390,8 @@ function createRow(category,selectable=false,closet=false){
     row.appendChild(e);
   }else{
     list.forEach(item=>{
-      const card=createCard(item,selectable,closet);
-      if(locked && String(item.id)===String(locked.id)){
-        card.classList.add('pinnedItem');
-        const tag=document.createElement('span');
-        tag.className='pinnedTag';
-        tag.textContent='vastgezet';
-        card.appendChild(tag);
-      }
-      row.appendChild(card);
+      const pinned=!!(locked&&String(item.id)===String(locked.id));
+      row.appendChild(createCard(item,selectable,closet,pinned));
     });
   }
 
@@ -549,69 +399,60 @@ function createRow(category,selectable=false,closet=false){
   return row;
 }
 
+function navigate(screen){
+  localStorage.setItem('ecloset_last_screen',screen);
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const target=safeGet(screen);
+  if(target)target.classList.add('active');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
+  window.scrollTo(0,0);
+  renderAll();
+}
 
-function renderStats(){
-  const summary=document.getElementById('closetSummary');
-  if(summary){
-    let total=0;
-    if(typeof items!=='undefined' && Array.isArray(items)){
-      total=items.length;
-    }else if(typeof data!=='undefined' && data.categories){
-      total=data.categories.reduce((sum,c)=>sum+((data[c.id]||[]).length),0);
-    }
-    const catCount=(typeof categories!=='undefined' && Array.isArray(categories)) ? categories.length : (data.categories?data.categories.length:0);
-    summary.textContent=total+' kledingstukken • '+catCount+' categorieën';
+function openDrawer(){}
+function closeDrawer(){}
+function pick(category){safeGet('file-'+category)?.click()}
+
+function updateHomeStat(){
+  const count=safeGet('homeItemCount');
+  if(count)count.textContent=items.length;
+  const outfits=safeGet('homeOutfitCount');
+  if(outfits){
+    const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+    outfits.textContent=saved.length;
   }
 }
 
+function firstImageFor(category){
+  const item=items.find(x=>(x.category||'tops')===category);
+  return item?item.image_url:'';
+}
 
-function createColorFilter(category){
-  const wrap=document.createElement('div');
-  wrap.className='filterPanel '+(openFilterPanels[category]?'open':'');
-  wrap.id='filter-'+category;
-
-  const title=document.createElement('div');
-  title.className='filterTitle';
-  title.textContent='Filter op kleur';
-  wrap.appendChild(title);
-
-  const bar=document.createElement('div');
-  bar.className='filterBar';
-
-  const all=document.createElement('button');
-  all.className='filterBtn '+(!colorFilters[category]?'active':'');
-  all.textContent='Alle kleuren';
-  all.onclick=()=>{
-    colorFilters[category]='';
-    saveColorFilters();
-    renderAll();
-  };
-  bar.appendChild(all);
-
-  COLORS.forEach(color=>{
-    const btn=document.createElement('button');
-    btn.className='filterBtn '+(colorFilters[category]===color.id?'active':'');
-    const dot=document.createElement('span');
-    dot.className='colorDot';
-    dot.style.background=color.hex;
-    btn.appendChild(dot);
-    btn.append(color.label);
-    btn.onclick=()=>{
-      colorFilters[category]=color.id;
-      saveColorFilters();
-      renderAll();
-    };
-    bar.appendChild(btn);
+function updateHomeTilePhotos(){
+  const pairs=[
+    [safeGet('tilePhoto-closet'),items[0]?.image_url||''],
+    [safeGet('tilePhoto-builder'),firstImageFor('tops')||firstImageFor('bottoms')||items[0]?.image_url||''],
+    [safeGet('tilePhoto-outfits'),firstImageFor('bottoms')||firstImageFor('tops')||items[0]?.image_url||''],
+    [safeGet('tilePhoto-purchase'),firstImageFor('shoes')||items[0]?.image_url||'']
+  ];
+  pairs.forEach(([el,url])=>{
+    if(el&&url){
+      el.style.backgroundImage='url("'+url+'")';
+      el.classList.add('hasOwnPhoto');
+    }
   });
+}
 
-  wrap.appendChild(bar);
-  return wrap;
+function renderStats(){
+  const summary=safeGet('closetSummary');
+  if(summary)summary.textContent=items.length+' kledingstukken • '+categories.length+' categorieën';
 }
 
 function renderCloset(){
   const container=safeGet('closetContent');
   if(!container)return;
   container.innerHTML='';
+
   categories.forEach(cat=>{
     const block=document.createElement('section');
     block.className='catBlock';
@@ -620,24 +461,11 @@ function renderCloset(){
     top.className='catTop';
 
     const left=document.createElement('div');
-    left.innerHTML='<h2>'+cat.name+(lockedOutfit[cat.id]?' <span class="lockedLabel">vastgezet</span>':'')+'</h2><div class="catCount">'+itemsFor(cat.id).length+' zichtbaar • '+allItemsFor(cat.id).length+' totaal</div>';
-
-    const actions=document.createElement('div');
-    actions.className='catActionsTop';
-
-    const filterBtn=document.createElement('button');
-    filterBtn.className='filterToggle';
-    filterBtn.textContent=colorFilters[cat.id] ? 'Filter actief' : 'Filter';
-    filterBtn.onclick=()=>{
-      openFilterPanels[cat.id]=!openFilterPanels[cat.id];
-      renderAll();
-    };
+    left.innerHTML='<h2>'+cat.name+(lockedOutfit[cat.id]?' <span class="lockedLabel">vastgezet</span>':'')+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
 
     const btn=document.createElement('button');
     btn.textContent='Foto toevoegen';
     btn.onclick=()=>pick(cat.id);
-
-    actions.append(filterBtn,btn);
 
     const input=document.createElement('input');
     input.type='file';
@@ -649,8 +477,8 @@ function renderCloset(){
       e.target.value='';
     };
 
-    top.append(left,actions);
-    block.append(top,input,createColorFilter(cat.id),createRow(cat.id,false,true));
+    top.append(left,btn);
+    block.append(top,input,createRow(cat.id,false,true));
     container.appendChild(block);
   });
 }
@@ -684,7 +512,7 @@ function renderRecent(){
     });
   }else{
     recent.forEach(item=>{
-      const card=createCard(item,false);
+      const card=createCard(item,false,false);
       card.classList.add('active');
       container.appendChild(card);
     });
@@ -702,7 +530,7 @@ function renderPurchase(){
 }
 
 function renderOutfits(){
-  const c=(typeof safeGet==='function') ? safeGet('savedOutfits') : document.getElementById('savedOutfits');
+  const c=safeGet('savedOutfits');
   if(!c)return;
   c.innerHTML='';
   const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
@@ -789,7 +617,7 @@ function renderModalColors(){
   COLORS.forEach(color=>{
     const b=document.createElement('button');
     const active=modalColorsList.includes(color.id);
-    b.className='colorChoice '+(active?'multiActive':'');
+    b.className='colorChoice '+(active?'multiActive active':'');
     const dot=document.createElement('span');
     dot.className='colorDot';
     dot.style.background=color.hex;
@@ -826,23 +654,54 @@ function renderModalSeasons(){
   });
 }
 
-function updateCenterCards(){
-  // Lichtgewicht: alleen markeren na render, niet continu tijdens scroll.
-  document.querySelectorAll('.row').forEach(row=>{
-    const cards=[...row.querySelectorAll('.item')];
-    if(!cards.length)return;
-    const box=row.getBoundingClientRect();
-    const center=box.left+box.width/2;
-    let best=null,bestDist=Infinity;
-    cards.forEach(card=>{
-      const r=card.getBoundingClientRect();
-      const c=r.left+r.width/2;
-      const dist=Math.abs(center-c);
-      if(dist<bestDist){bestDist=dist;best=card}
-      card.classList.remove('center');
+function showSavedHint(){
+  const old=document.querySelector('.savedHint');
+  if(old)old.remove();
+  const div=document.createElement('div');
+  div.className='savedHint';
+  div.textContent='Opgeslagen';
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),1100);
+}
+
+async function saveModalItem(){
+  if(!currentModalItem)return;
+  const id=currentModalItem.id;
+  const name=(safeGet('modalName')?.value||'').trim();
+  const favorite=!!safeGet('modalFav')?.checked;
+  const newColor=colorString(modalColorsList);
+  const newSeason=modalSeason;
+
+  try{
+    await api('/rest/v1/clothing?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,color:newColor,season:newSeason,favorite})
     });
-    if(best)best.classList.add('center');
-  });
+
+    const item=items.find(x=>String(x.id)===String(id));
+    if(item)Object.assign(item,{name,color:newColor,season:newSeason,favorite});
+    currentModalItem=item||currentModalItem;
+    safeGet('modalTitle').textContent=name||'Naamloos kledingstuk';
+    showSavedHint();
+    renderAll();
+    safeGet('photoModal')?.classList.add('open');
+  }catch(e){
+    console.error(e);
+    alert('Opslaan mislukt.');
+  }
+}
+
+async function deleteItem(id){
+  if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
+  try{
+    await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
+    closePhotoModal();
+    await loadCloud();
+  }catch(e){
+    console.error(e);
+    alert('Verwijderen mislukt.');
+  }
 }
 
 function addCategory(){
@@ -852,7 +711,6 @@ function addCategory(){
   categories.push({id:'cat_'+Date.now(),name,color:colors[categories.length%colors.length]});
   saveCategories();
   renderAll();
-  closeDrawer();
 }
 
 function renameCategory(id){
@@ -878,7 +736,7 @@ function deleteCategory(id){
   if(!cat)return;
   const count=itemsFor(id).length;
   if(count>0){
-    alert('Deze categorie bevat nog '+count+' foto(\'s). Verwijder die eerst.');
+    alert("Deze categorie bevat nog "+count+" foto(s). Verwijder die eerst.");
     return;
   }
   if(!confirm('Categorie "'+cat.name+'" verwijderen?'))return;
@@ -888,11 +746,7 @@ function deleteCategory(id){
 }
 
 function saveOutfit(){
-  if(!Object.values(selected).some(Boolean)){
-    alert('Kies eerst minstens één kledingstuk.');
-    return;
-  }
-  alert('Outfits bewaren werken we later verder af.');
+  alert('Gebruik het plusje op kledingstukken in Mijn kast om outfits vast te zetten.');
 }
 
 function clearOutfit(){
@@ -901,46 +755,24 @@ function clearOutfit(){
     const slot=safeGet('slot-'+id);
     if(slot)slot.textContent=label;
   });
-  document.querySelectorAll('.item.active').forEach(c=>c.classList.remove('active'));
 }
 
-
-function updateHomeStat(){
-  const count=document.getElementById('homeItemCount');
-  if(count)count.textContent=items.length;
-  const outfits=document.getElementById('homeOutfitCount');
-  if(outfits){
-    const saved=Array.isArray(window.savedOutfits) ? window.savedOutfits.length : 0;
-    outfits.textContent=saved;
-  }
-}
-
-function firstImageFor(category){
-  const item=items.find(x=>(x.category||'tops')===category);
-  return item ? item.image_url : '';
-}
-
-function updateHomeTilePhotos(){
-  const closet=document.getElementById('tilePhoto-closet');
-  const builder=document.getElementById('tilePhoto-builder');
-  const outfits=document.getElementById('tilePhoto-outfits');
-  const purchase=document.getElementById('tilePhoto-purchase');
-
-  const top=firstImageFor('tops');
-  const bottom=firstImageFor('bottoms');
-  const shoes=firstImageFor('shoes');
-  const any=items[0]?.image_url || '';
-
-  [
-    [closet, any],
-    [builder, top || bottom || any],
-    [outfits, bottom || top || any],
-    [purchase, shoes || any]
-  ].forEach(([el,url])=>{
-    if(el && url){
-      el.style.backgroundImage='url("'+url+'")';
-      el.classList.add('hasOwnPhoto');
-    }
+function updateCenterCards(){
+  document.querySelectorAll('.row').forEach(row=>{
+    const cards=[...row.querySelectorAll('.item')];
+    if(!cards.length)return;
+    const box=row.getBoundingClientRect();
+    const center=box.left+box.width/2;
+    let best=null,bestDist=Infinity;
+    cards.forEach(card=>{
+      if(card.classList.contains('pinnedItem'))return;
+      const r=card.getBoundingClientRect();
+      const c=r.left+r.width/2;
+      const dist=Math.abs(center-c);
+      if(dist<bestDist){bestDist=dist;best=card}
+      card.classList.remove('center');
+    });
+    if(best)best.classList.add('center');
   });
 }
 
@@ -954,7 +786,7 @@ function renderAll(){
   renderPurchase();
   renderOutfits();
   renderCategories();
-  updateLockButtons();
+  updateFloatingSave();
   setTimeout(updateCenterCards,80);
 }
 
@@ -964,9 +796,6 @@ function bindEvents(){
   });
 
   if(safeGet('settingsBtn'))safeGet('settingsBtn').onclick=()=>{};
-  
-  if(safeGet('closeDrawer'))safeGet('closeDrawer').onclick=closeDrawer;
-
   if(safeGet('toggleAi'))safeGet('toggleAi').onclick=()=>{
     const box=safeGet('aiBox');
     if(!box)return;
@@ -980,10 +809,7 @@ function bindEvents(){
   if(safeGet('drawerRefresh'))safeGet('drawerRefresh').onclick=loadCloud;
   if(safeGet('saveOutfit'))safeGet('saveOutfit').onclick=saveOutfit;
   if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
-  if(safeGet('clearLockedOutfit'))safeGet('clearLockedOutfit').onclick=clearLockedOutfit;
-  if(safeGet('saveLockedOutfit'))safeGet('saveLockedOutfit').onclick=saveLockedOutfit;
   if(safeGet('floatingSaveOutfit'))safeGet('floatingSaveOutfit').onclick=saveLockedOutfit;
-  if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
 
   if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
   if(safeGet('file-purchase'))safeGet('file-purchase').onchange=e=>{
@@ -999,14 +825,11 @@ function bindEvents(){
   if(safeGet('modalDelete'))safeGet('modalDelete').onclick=()=>{
     if(currentModalItem)deleteItem(currentModalItem.id);
   };
-
-  
 }
 
 async function start(){
   categories=loadCategories();
   window.savedOutfits=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
-  colorFilters=loadColorFilters();
   bindEvents();
   renderAll();
   await loadCloud();
