@@ -470,7 +470,7 @@ function saveLockedOutfit(){
   renderAll();
 }
 
-function createCard(item,selectable=false){
+function createCard(item,selectable=false,closet=false){
   const card=document.createElement('article');
   card.className='item';
   card.dataset.itemId=item.id;
