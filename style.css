@@ -680,3 +680,63 @@
 #bgTestStatus{
   display:none!important;
 }
+
+/* 2.7 outfits bewerken + outfitgebruik */
+.outfitUsagePill{
+  display:inline-block;
+  border-radius:999px;
+  background:#f2e7dd;
+  color:#6f5140;
+  padding:5px 9px;
+  font-size:12px;
+  font-weight:800;
+  margin-top:7px;
+}
+.outfitPanelActions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.outfitPanelActions button{
+  padding:9px 13px!important;
+}
+.editOutfitItems{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin:14px 0;
+}
+.editOutfitRow{
+  display:grid;
+  grid-template-columns:72px 1fr auto;
+  gap:10px;
+  align-items:center;
+  background:#fff8ef;
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:9px;
+}
+.editOutfitRow img{
+  width:72px;
+  height:72px;
+  object-fit:cover;
+  border-radius:14px;
+  background:#efe4dc;
+}
+.editOutfitRow b{
+  display:block;
+  color:#6f5140;
+  font-size:14px;
+}
+.editOutfitRow span{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-top:2px;
+}
+.editOutfitRow button{
+  background:#f2e7dd!important;
+  color:#6f5140!important;
+  padding:8px 10px!important;
+}

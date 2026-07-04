@@ -579,6 +579,21 @@ function saveLockedOutfit(){
   openOutfitModal();
 }
 
+
+function savedOutfitsList(){
+  try{return JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]')}catch(e){return []}
+}
+
+function outfitUsageCount(itemId){
+  const id=String(itemId);
+  return savedOutfitsList().filter(outfit=>Object.values(outfit.items||{}).some(v=>String(v)===id)).length;
+}
+
+function updateHomeOutfitCount(){
+  const outfits=document.getElementById('homeOutfitCount');
+  if(outfits)outfits.textContent=savedOutfitsList().length;
+}
+
 function createCard(item,selectable=false,closet=false,selectedOutfit=false){
   const card=document.createElement('article');
   card.className='item';
@@ -646,6 +661,13 @@ function createCard(item,selectable=false,closet=false,selectedOutfit=false){
   }
 
   if(badges.children.length)card.appendChild(badges);
+
+  
+  const usage=outfitUsageCount(item.id);
+  const usagePill=document.createElement('span');
+  usagePill.className='outfitUsagePill';
+  usagePill.textContent=usage+' outfit'+(usage===1?'':'s');
+  card.appendChild(usagePill);
 
   return card;
 }
@@ -943,8 +965,10 @@ function renderOutfits(){
   const c=(typeof safeGet==='function') ? safeGet('savedOutfits') : document.getElementById('savedOutfits');
   if(!c)return;
   c.innerHTML='';
-  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+  const saved=savedOutfitsList();
   window.savedOutfits=saved;
+  updateHomeOutfitCount();
+
   if(!saved.length){
     const e=document.createElement('div');
     e.className='empty';
@@ -952,10 +976,12 @@ function renderOutfits(){
     c.appendChild(e);
     return;
   }
+
   saved.slice().reverse().forEach((outfit,index)=>{
     const panel=document.createElement('div');
     panel.className='panel';
     panel.innerHTML='<h2>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h2><p>'+(outfit.note?outfit.note+' • ':'')+'Bewaard op '+outfit.date+'</p>';
+
     const row=document.createElement('div');
     row.className='row compact';
     Object.values(outfit.items||{}).forEach(id=>{
@@ -967,6 +993,15 @@ function renderOutfits(){
       }
     });
     panel.appendChild(row);
+
+    const actions=document.createElement('div');
+    actions.className='outfitPanelActions';
+    const edit=document.createElement('button');
+    edit.textContent='Bewerken';
+    edit.onclick=()=>openEditOutfitModal(outfit.id);
+    actions.appendChild(edit);
+    panel.appendChild(actions);
+
     c.appendChild(panel);
   });
 }
@@ -1197,6 +1232,86 @@ function fixCategoryButton(){
   }
 }
 
+
+let editingOutfitId=null;
+
+function openEditOutfitModal(outfitId){
+  const saved=savedOutfitsList();
+  const outfit=saved.find(o=>String(o.id)===String(outfitId));
+  if(!outfit)return;
+
+  editingOutfitId=outfit.id;
+  document.getElementById('editOutfitName').value=outfit.name||'';
+  document.getElementById('editOutfitNote').value=outfit.note||'';
+
+  const box=document.getElementById('editOutfitItems');
+  box.innerHTML='';
+
+  Object.entries(outfit.items||{}).forEach(([cat,itemId])=>{
+    const item=items.find(x=>String(x.id)===String(itemId));
+    if(!item)return;
+
+    const row=document.createElement('div');
+    row.className='editOutfitRow';
+    row.dataset.cat=cat;
+    row.innerHTML='<img src="'+item.image_url+'" alt=""><div><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos kledingstuk')+'</span></div>';
+
+    const remove=document.createElement('button');
+    remove.textContent='Verwijder';
+    remove.onclick=()=>{
+      row.remove();
+    };
+    row.appendChild(remove);
+    box.appendChild(row);
+  });
+
+  document.getElementById('editOutfitModal').classList.add('open');
+}
+
+function closeEditOutfitModal(){
+  const modal=document.getElementById('editOutfitModal');
+  if(modal)modal.classList.remove('open');
+  editingOutfitId=null;
+}
+
+function saveEditedOutfit(){
+  if(!editingOutfitId)return;
+
+  const saved=savedOutfitsList();
+  const idx=saved.findIndex(o=>String(o.id)===String(editingOutfitId));
+  if(idx<0)return;
+
+  const outfit=saved[idx];
+  const kept={};
+  document.querySelectorAll('#editOutfitItems .editOutfitRow').forEach(row=>{
+    const cat=row.dataset.cat;
+    if(outfit.items && outfit.items[cat])kept[cat]=outfit.items[cat];
+  });
+
+  saved[idx]={
+    ...outfit,
+    name:(document.getElementById('editOutfitName')?.value||'').trim() || 'Naamloze outfit',
+    note:(document.getElementById('editOutfitNote')?.value||'').trim(),
+    items:kept
+  };
+
+  localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
+  window.savedOutfits=saved;
+  closeEditOutfitModal();
+  renderAll();
+}
+
+function deleteEditedOutfit(){
+  if(!editingOutfitId)return;
+  if(!confirm('Deze outfit verwijderen?'))return;
+
+  const saved=savedOutfitsList().filter(o=>String(o.id)!==String(editingOutfitId));
+  localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
+  window.savedOutfits=saved;
+  closeEditOutfitModal();
+  renderAll();
+}
+
 function renderAll(){
   updateHomeStat();
   updateHomeTilePhotos();
@@ -1210,6 +1325,8 @@ function renderAll(){
   fixCategoryButton();
   updateFloatingSave();
   setTimeout(updateCenterCards,80);
+
+  updateHomeOutfitCount();
 }
 
 function bindEvents(){
@@ -1256,6 +1373,13 @@ function bindEvents(){
   if(safeGet('testCollage'))safeGet('testCollage').onclick=testCollage;
   const outfitModal=document.getElementById('outfitModal');
   if(outfitModal)outfitModal.onclick=e=>{if(e.target.id==='outfitModal')closeOutfitModal()};
+
+  if(safeGet('closeEditOutfitModal'))safeGet('closeEditOutfitModal').onclick=closeEditOutfitModal;
+  if(safeGet('cancelEditOutfit'))safeGet('cancelEditOutfit').onclick=closeEditOutfitModal;
+  if(safeGet('saveEditedOutfit'))safeGet('saveEditedOutfit').onclick=saveEditedOutfit;
+  if(safeGet('deleteEditedOutfit'))safeGet('deleteEditedOutfit').onclick=deleteEditedOutfit;
+  const editOutfitModal=document.getElementById('editOutfitModal');
+  if(editOutfitModal)editOutfitModal.onclick=e=>{if(e.target.id==='editOutfitModal')closeEditOutfitModal()};
 }
 
 async function start(){

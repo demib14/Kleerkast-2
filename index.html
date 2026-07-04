@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 2.6b</title>
-  <link rel="stylesheet" href="style.css?v=26b">
+  <title>eCloset 2.7</title>
+  <link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 2.6b — herstelde outfits</small>
+  <small>eCloset 2.7 — outfits bewerken</small>
 </header>
 
 <main>
@@ -173,6 +173,29 @@
   </div>
 </div>
 
+
+<div id="editOutfitModal" class="modal">
+  <div class="modalCard outfitModalCard">
+    <button class="modalClose" id="closeEditOutfitModal">×</button>
+    <h2>Outfit bewerken</h2>
+    <p class="modalIntro">Pas naam, notitie of kledingstukken aan.</p>
+
+    <label class="fieldLabel">Naam outfit</label>
+    <input id="editOutfitName" class="textInput" placeholder="Naam outfit">
+
+    <label class="fieldLabel">Notitie</label>
+    <input id="editOutfitNote" class="textInput" placeholder="Optioneel">
+
+    <div id="editOutfitItems" class="editOutfitItems"></div>
+
+    <div class="modalActions">
+      <button id="saveEditedOutfit">Wijzigingen opslaan</button>
+      <button id="deleteEditedOutfit" class="danger">Outfit verwijderen</button>
+      <button id="cancelEditOutfit" class="light">Annuleren</button>
+    </div>
+  </div>
+</div>
+
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
   <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
@@ -181,6 +204,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=26b"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>
