@@ -328,3 +328,33 @@
   padding:9px 13px!important;
   box-shadow:0 8px 18px rgba(61,43,31,.08);
 }
+
+/* 1.8d: gekozen item blijft links vaststaan, maar even groot */
+.row.lockedRow{
+  overflow-x:auto!important;
+  justify-content:flex-start!important;
+  padding:4px 2px 18px!important;
+}
+.row.lockedRow .item.selectedForOutfit{
+  position:sticky!important;
+  left:0!important;
+  z-index:12!important;
+  min-width:154px!important;
+  max-width:none!important;
+  transform:none!important;
+  opacity:1!important;
+  border:2px solid rgba(152,113,78,.55)!important;
+  background:#fff8ef!important;
+  box-shadow:0 16px 34px rgba(61,43,31,.18)!important;
+}
+.row.lockedRow .item.selectedForOutfit img{
+  height:186px!important;
+}
+.closetManageBtn{
+  margin-top:10px!important;
+  background:white!important;
+  color:#6f5140!important;
+  border:1px solid var(--line)!important;
+  padding:9px 13px!important;
+  box-shadow:0 8px 18px rgba(61,43,31,.08);
+}

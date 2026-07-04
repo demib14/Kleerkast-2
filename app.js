@@ -239,6 +239,12 @@ async function addPhotos(category,files){
       break;
     }
   }
+  
+  const catBtn=document.getElementById('closetManageCategories');
+  if(catBtn){
+    catBtn.onclick=()=>navigate('settings');
+  }
+
   await loadCloud();
 }
 
@@ -411,6 +417,7 @@ function createRow(category,selectable=false,closet=false){
   row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
   return row;
 }
+
 
 
 function navigate(screen){
