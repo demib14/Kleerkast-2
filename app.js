@@ -319,6 +319,7 @@ function navigate(screen){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
   window.scrollTo(0,0);
   renderAll();
+  updateLockButtons();
   setTimeout(updateCenterCards,80);
 }
 
@@ -514,14 +515,15 @@ function createCard(item,selectable=false){
 
 function createRow(category,selectable=false,closet=false){
   const row=document.createElement('div');
-  const locked=lockedOutfit[category];
-  row.className='row '+(closet?'closetRow':'')+(locked?' lockedRow':'');
+  const locked=lockedOutfit && lockedOutfit[category];
+  row.className='row '+(closet?'closetRow ':'')+(locked?'lockedRow':'');
   row.dataset.row=category;
 
   let list=itemsFor(category);
 
   if(locked){
-    list=[locked,...list.filter(item=>String(item.id)!==String(locked.id))];
+    const lockedId=String(locked.id);
+    list=[locked].concat(list.filter(item=>String(item.id)!==lockedId));
   }
 
   if(!list.length){
@@ -530,7 +532,7 @@ function createRow(category,selectable=false,closet=false){
     e.textContent='Nog geen foto’s';
     row.appendChild(e);
   }else{
-    list.forEach((item,index)=>{
+    list.forEach(item=>{
       const card=createCard(item,selectable,closet);
       if(locked && String(item.id)===String(locked.id)){
         card.classList.add('pinnedItem');
@@ -546,6 +548,7 @@ function createRow(category,selectable=false,closet=false){
   row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
   return row;
 }
+
 
 function renderStats(){
   const summary=document.getElementById('closetSummary');
@@ -951,6 +954,7 @@ function renderAll(){
   renderPurchase();
   renderOutfits();
   renderCategories();
+  updateLockButtons();
   setTimeout(updateCenterCards,80);
 }
 
