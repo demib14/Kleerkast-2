@@ -10,3 +10,7 @@
 .filterPanel.open{display:block}
 .colorChoice.multiActive{background:var(--brown)!important;color:white!important}
 .filterBtn .colorDot{margin-right:0}
+
+.closetHeader{margin:2px 2px 18px;display:flex;justify-content:space-between;align-items:flex-end}
+.closetHeader h2{font-family:Georgia,serif;font-size:32px;margin:0 0 4px}
+.closetHeader p{margin:0;color:var(--muted);font-size:14px}

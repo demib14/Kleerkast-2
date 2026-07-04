@@ -386,9 +386,17 @@ function createRow(category,selectable=false,closet=false){
 }
 
 function renderStats(){
-  const el=safeGet('stats');
-  if(!el)return;
-  el.innerHTML='<div class="stat"><strong>'+items.length+'</strong><span>kledingstukken in cloud</span></div><div class="stat"><strong>'+categories.length+'</strong><span>categorieën</span></div>';
+  const summary=document.getElementById('closetSummary');
+  if(summary){
+    let total=0;
+    if(typeof items!=='undefined' && Array.isArray(items)){
+      total=items.length;
+    }else if(typeof data!=='undefined' && data.categories){
+      total=data.categories.reduce((sum,c)=>sum+((data[c.id]||[]).length),0);
+    }
+    const catCount=(typeof categories!=='undefined' && Array.isArray(categories)) ? categories.length : (data.categories?data.categories.length:0);
+    summary.textContent=total+' kledingstukken • '+catCount+' categorieën';
+  }
 }
 
 
@@ -725,7 +733,7 @@ function bindEvents(){
   });
 
   if(safeGet('settingsBtn'))safeGet('settingsBtn').onclick=openDrawer;
-  if(safeGet('closetGear'))safeGet('closetGear').onclick=openDrawer;
+  
   if(safeGet('closeDrawer'))safeGet('closeDrawer').onclick=closeDrawer;
 
   if(safeGet('toggleAi'))safeGet('toggleAi').onclick=()=>{
