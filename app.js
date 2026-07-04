@@ -961,6 +961,55 @@ function renderPurchase(){
   c.appendChild(e);
 }
 
+
+function miniCollageClass(count){
+  if(count===1)return 'c1';
+  if(count===2)return 'c2';
+  if(count===3)return 'c3';
+  if(count===4)return 'c4';
+  if(count===5)return 'c5';
+  if(count===6)return 'c6';
+  return 'cMore';
+}
+
+function outfitItemsArray(outfit){
+  return Object.values(outfit.items||{})
+    .map(id=>items.find(x=>String(x.id)===String(id)))
+    .filter(Boolean);
+}
+
+function buildMiniCollage(outfit, className='outfitThumbCollage'){
+  const wrap=document.createElement('div');
+  wrap.className=className;
+  const outfitItems=outfitItemsArray(outfit);
+  const grid=document.createElement('div');
+  grid.className='collageGridMini '+miniCollageClass(outfitItems.length || 1);
+  if(!outfitItems.length){
+    const empty=document.createElement('div');
+    empty.className='collageMiniTile';
+    empty.textContent='Geen items';
+    grid.appendChild(empty);
+  }
+  outfitItems.forEach(item=>{
+    const tile=document.createElement('div');
+    tile.className='collageMiniTile';
+    const img=document.createElement('img');
+    img.src=item.image_url;
+    img.alt=item.name||'';
+    tile.appendChild(img);
+    grid.appendChild(tile);
+  });
+  wrap.appendChild(grid);
+  return wrap;
+}
+
+function renderEditOutfitCollage(outfit){
+  const box=document.getElementById('editOutfitCollage');
+  if(!box)return;
+  box.innerHTML='';
+  const collage=buildMiniCollage(outfit,'miniOutfitCollage');
+  box.appendChild(collage.firstElementChild);
+}
 function renderOutfits(){
   const c=(typeof safeGet==='function') ? safeGet('savedOutfits') : document.getElementById('savedOutfits');
   if(!c)return;
@@ -977,33 +1026,31 @@ function renderOutfits(){
     return;
   }
 
-  saved.slice().reverse().forEach((outfit,index)=>{
-    const panel=document.createElement('div');
-    panel.className='panel';
-    panel.innerHTML='<h2>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h2><p>'+(outfit.note?outfit.note+' • ':'')+'Bewaard op '+outfit.date+'</p>';
+  const gallery=document.createElement('div');
+  gallery.className='outfitGallery';
 
-    const row=document.createElement('div');
-    row.className='row compact';
-    Object.values(outfit.items||{}).forEach(id=>{
-      const item=items.find(x=>String(x.id)===String(id));
-      if(item){
-        const card=createCard(item,false,false);
-        card.classList.add('active');
-        row.appendChild(card);
-      }
-    });
-    panel.appendChild(row);
+  saved.slice().reverse().forEach((outfit,index)=>{
+    const card=document.createElement('article');
+    card.className='outfitCard';
+    card.appendChild(buildMiniCollage(outfit,'outfitThumbCollage'));
+
+    const body=document.createElement('div');
+    body.className='outfitCardBody';
+    body.innerHTML='<h3>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h3><p>'+(outfit.note?outfit.note+' • ':'')+Object.keys(outfit.items||{}).length+' items</p>';
 
     const actions=document.createElement('div');
-    actions.className='outfitPanelActions';
+    actions.className='outfitCardActions';
     const edit=document.createElement('button');
     edit.textContent='Bewerken';
-    edit.onclick=()=>openEditOutfitModal(outfit.id);
+    edit.onclick=(e)=>{e.stopPropagation();openEditOutfitModal(outfit.id)};
     actions.appendChild(edit);
-    panel.appendChild(actions);
-
-    c.appendChild(panel);
+    body.appendChild(actions);
+    card.appendChild(body);
+    card.onclick=()=>openEditOutfitModal(outfit.id);
+    gallery.appendChild(card);
   });
+
+  c.appendChild(gallery);
 }
 
 function renderCategories(){
@@ -1265,6 +1312,14 @@ function openEditOutfitModal(outfitId){
     box.appendChild(row);
   });
 
+  renderEditOutfitCollage(outfit);
+  const existingHint=document.querySelector('#editOutfitModal .editHint');
+  if(existingHint)existingHint.remove();
+  const hint=document.createElement('p');
+  hint.className='editHint';
+  hint.textContent='Items wisselen of toevoegen bouwen we in de volgende stap. Verwijderen kan nu al.';
+  const editBoxForHint=document.getElementById('editOutfitItems');
+  if(editBoxForHint)editBoxForHint.parentNode.insertBefore(hint,editBoxForHint);
   document.getElementById('editOutfitModal').classList.add('open');
 }
 
