@@ -38,6 +38,7 @@ const SEASONS=[
 let categories=[];
 let items=[];
 let selected={tops:null,bottoms:null,shoes:null,bags:null};
+let lockedOutfit={};
 let currentModalItem=null;
 let modalColorsList=[];
 let modalSeason='';
@@ -391,9 +392,99 @@ function updateVisibleItemCard(item){
   });
 }
 
+
+function categoryName(id){
+  const c=(typeof categories!=='undefined'?categories:[]).find(x=>x.id===id);
+  return c ? c.name : id;
+}
+
+function toggleLockItem(item){
+  const cat=item.category||'tops';
+  if(lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id)){
+    delete lockedOutfit[cat];
+  }else{
+    lockedOutfit[cat]=item;
+  }
+  renderLockedOutfitBar();
+  updateLockButtons();
+}
+
+function updateLockButtons(){
+  document.querySelectorAll('.lockBtn').forEach(btn=>{
+    const id=btn.dataset.itemId;
+    const item=items.find(x=>String(x.id)===String(id));
+    if(!item)return;
+    const cat=item.category||'tops';
+    const isLocked=lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id);
+    btn.classList.toggle('locked',isLocked);
+    btn.textContent=isLocked?'🔒':'🔓';
+  });
+}
+
+function renderLockedOutfitBar(){
+  const bar=document.getElementById('closetOutfitBar');
+  const preview=document.getElementById('lockedPreview');
+  const summary=document.getElementById('lockedSummary');
+  if(!bar||!preview||!summary)return;
+
+  const locked=Object.entries(lockedOutfit);
+  bar.classList.toggle('hidden',locked.length===0);
+  preview.innerHTML='';
+
+  if(!locked.length){
+    summary.textContent='Nog niets vastgezet';
+    return;
+  }
+
+  summary.textContent=locked.length+' item(s) vastgezet';
+
+  locked.forEach(([cat,item])=>{
+    const slot=document.createElement('div');
+    slot.className='lockedSlot';
+    slot.title=categoryName(cat);
+    slot.innerHTML='<img src="'+item.image_url+'" alt="'+categoryName(cat)+'">';
+    preview.appendChild(slot);
+  });
+
+  ['tops','bottoms','shoes','bags'].forEach(cat=>{
+    if(!lockedOutfit[cat]){
+      const slot=document.createElement('div');
+      slot.className='lockedSlot';
+      slot.textContent=categoryName(cat);
+      preview.appendChild(slot);
+    }
+  });
+}
+
+function clearLockedOutfit(){
+  lockedOutfit={};
+  renderLockedOutfitBar();
+  updateLockButtons();
+}
+
+function saveLockedOutfit(){
+  const locked=Object.values(lockedOutfit);
+  if(!locked.length){
+    alert('Zet eerst minstens één kledingstuk vast.');
+    return;
+  }
+  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+  saved.push({
+    id:Date.now(),
+    date:new Date().toLocaleDateString('nl-BE'),
+    items:Object.fromEntries(Object.entries(lockedOutfit).map(([cat,item])=>[cat,item.id]))
+  });
+  localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
+  window.savedOutfits=saved;
+  alert('Outfit bewaard');
+  clearLockedOutfit();
+  renderAll();
+}
+
 function createCard(item,selectable=false){
   const card=document.createElement('article');
   card.className='item';
+  card.dataset.itemId=item.id;
   card.dataset.itemId=item.id;
   const img=document.createElement('img');
   img.src=item.image_url;
@@ -409,6 +500,18 @@ function createCard(item,selectable=false){
     }
   };
   card.appendChild(img);
+
+  if(closet){
+    const lock=document.createElement('button');
+    lock.className='lockBtn';
+    lock.dataset.itemId=item.id;
+    lock.textContent='🔓';
+    lock.onclick=(event)=>{
+      event.stopPropagation();
+      toggleLockItem(item);
+    };
+    card.appendChild(lock);
+  }
 
   if(item.name){
     const name=document.createElement('div');
@@ -590,13 +693,35 @@ function renderPurchase(){
 }
 
 function renderOutfits(){
-  const c=safeGet('savedOutfits');
+  const c=(typeof safeGet==='function') ? safeGet('savedOutfits') : document.getElementById('savedOutfits');
   if(!c)return;
   c.innerHTML='';
-  const e=document.createElement('div');
-  e.className='empty';
-  e.textContent='Nog geen outfits bewaard';
-  c.appendChild(e);
+  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+  window.savedOutfits=saved;
+  if(!saved.length){
+    const e=document.createElement('div');
+    e.className='empty';
+    e.textContent='Nog geen outfits bewaard';
+    c.appendChild(e);
+    return;
+  }
+  saved.slice().reverse().forEach((outfit,index)=>{
+    const panel=document.createElement('div');
+    panel.className='panel';
+    panel.innerHTML='<h2>Outfit '+(saved.length-index)+'</h2><p>Bewaard op '+outfit.date+'</p>';
+    const row=document.createElement('div');
+    row.className='row compact';
+    Object.values(outfit.items).forEach(id=>{
+      const item=items.find(x=>String(x.id)===String(id));
+      if(item){
+        const card=createCard(item,false,false);
+        card.classList.add('active');
+        row.appendChild(card);
+      }
+    });
+    panel.appendChild(row);
+    c.appendChild(panel);
+  });
 }
 
 function renderCategories(){
@@ -845,6 +970,8 @@ function bindEvents(){
   if(safeGet('drawerRefresh'))safeGet('drawerRefresh').onclick=loadCloud;
   if(safeGet('saveOutfit'))safeGet('saveOutfit').onclick=saveOutfit;
   if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
+  if(safeGet('clearLockedOutfit'))safeGet('clearLockedOutfit').onclick=clearLockedOutfit;
+  if(safeGet('saveLockedOutfit'))safeGet('saveLockedOutfit').onclick=saveLockedOutfit;
   if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
 
   if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
@@ -867,6 +994,7 @@ function bindEvents(){
 
 async function start(){
   categories=loadCategories();
+  window.savedOutfits=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
   colorFilters=loadColorFilters();
   bindEvents();
   renderAll();
