@@ -39,6 +39,9 @@ let categories=[];
 let items=[];
 let selected={tops:null,bottoms:null,shoes:null,bags:null};
 let lockedOutfit={};
+let colorFilters={};
+let seasonFilters={};
+let openFilterPanels={};
 let currentModalItem=null;
 let modalColorsList=[];
 let modalSeason='';
@@ -64,6 +67,16 @@ function loadCategories(){
 
 function saveCategories(){
   localStorage.setItem('ecloset_categories_master',JSON.stringify(categories));
+}
+
+function loadFilterState(){
+  try{colorFilters=JSON.parse(localStorage.getItem('ecloset_color_filters')||'{}')}catch(e){colorFilters={}}
+  try{seasonFilters=JSON.parse(localStorage.getItem('ecloset_season_filters')||'{}')}catch(e){seasonFilters={}}
+}
+
+function saveFilterState(){
+  localStorage.setItem('ecloset_color_filters',JSON.stringify(colorFilters));
+  localStorage.setItem('ecloset_season_filters',JSON.stringify(seasonFilters));
 }
 
 function setStatus(text,type=''){
@@ -250,7 +263,12 @@ function seasonLabel(id){
 }
 
 function itemsFor(category){
-  return items.filter(item=>(item.category||'tops')===category);
+  let list=items.filter(item=>(item.category||'tops')===category);
+  const color=colorFilters[category];
+  const season=seasonFilters[category];
+  if(color)list=list.filter(item=>normalizeColors(item.color).includes(color));
+  if(season)list=list.filter(item=>(item.season||'')===season);
+  return list;
 }
 
 function categoryName(id){
@@ -448,6 +466,81 @@ function renderStats(){
   if(summary)summary.textContent=items.length+' kledingstukken • '+categories.length+' categorieën';
 }
 
+
+function createFilterPanel(category){
+  const wrap=document.createElement('div');
+  wrap.className='filterPanel '+(openFilterPanels[category]?'open':'');
+  wrap.id='filter-'+category;
+
+  const colorTitle=document.createElement('div');
+  colorTitle.className='filterTitle';
+  colorTitle.textContent='Filter op kleur';
+  wrap.appendChild(colorTitle);
+
+  const colorBar=document.createElement('div');
+  colorBar.className='filterBar';
+
+  const allColors=document.createElement('button');
+  allColors.className='filterBtn '+(!colorFilters[category]?'active':'');
+  allColors.textContent='Alle kleuren';
+  allColors.onclick=()=>{
+    colorFilters[category]='';
+    saveFilterState();
+    renderAll();
+  };
+  colorBar.appendChild(allColors);
+
+  COLORS.forEach(color=>{
+    const b=document.createElement('button');
+    b.className='filterBtn '+(colorFilters[category]===color.id?'active':'');
+    const dot=document.createElement('span');
+    dot.className='colorDot';
+    dot.style.background=color.hex;
+    b.appendChild(dot);
+    b.append(color.label);
+    b.onclick=()=>{
+      colorFilters[category]=color.id;
+      saveFilterState();
+      renderAll();
+    };
+    colorBar.appendChild(b);
+  });
+  wrap.appendChild(colorBar);
+
+  const seasonTitle=document.createElement('div');
+  seasonTitle.className='filterTitle';
+  seasonTitle.textContent='Filter op seizoen';
+  wrap.appendChild(seasonTitle);
+
+  const seasonBar=document.createElement('div');
+  seasonBar.className='filterBar';
+
+  const allSeasons=document.createElement('button');
+  allSeasons.className='filterBtn '+(!seasonFilters[category]?'active':'');
+  allSeasons.textContent='Alle seizoenen';
+  allSeasons.onclick=()=>{
+    seasonFilters[category]='';
+    saveFilterState();
+    renderAll();
+  };
+  seasonBar.appendChild(allSeasons);
+
+  SEASONS.forEach(season=>{
+    const b=document.createElement('button');
+    b.className='filterBtn '+(seasonFilters[category]===season.id?'active':'');
+    b.textContent=season.label;
+    b.onclick=()=>{
+      seasonFilters[category]=season.id;
+      saveFilterState();
+      renderAll();
+    };
+    seasonBar.appendChild(b);
+  });
+  wrap.appendChild(seasonBar);
+
+  return wrap;
+}
+
 function renderCloset(){
   const container=safeGet('closetContent');
   if(!container)return;
@@ -463,9 +556,22 @@ function renderCloset(){
     const left=document.createElement('div');
     left.innerHTML='<h2>'+cat.name+(lockedOutfit[cat.id]?' <span class="lockedLabel">vastgezet</span>':'')+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
 
+    const actions=document.createElement('div');
+    actions.className='catActionsTop';
+
+    const filterBtn=document.createElement('button');
+    filterBtn.className='filterToggle';
+    filterBtn.textContent=(colorFilters[cat.id]||seasonFilters[cat.id])?'Filter actief':'Filter';
+    filterBtn.onclick=()=>{
+      openFilterPanels[cat.id]=!openFilterPanels[cat.id];
+      renderAll();
+    };
+
     const btn=document.createElement('button');
     btn.textContent='Foto toevoegen';
     btn.onclick=()=>pick(cat.id);
+
+    actions.append(filterBtn,btn);
 
     const input=document.createElement('input');
     input.type='file';
@@ -477,8 +583,8 @@ function renderCloset(){
       e.target.value='';
     };
 
-    top.append(left,btn);
-    block.append(top,input,createRow(cat.id,false,true));
+    top.append(left,actions);
+    block.append(top,input,createFilterPanel(cat.id),createRow(cat.id,false,true));
     container.appendChild(block);
   });
 }
@@ -829,6 +935,7 @@ function bindEvents(){
 
 async function start(){
   categories=loadCategories();
+  loadFilterState();
   window.savedOutfits=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
   bindEvents();
   renderAll();
