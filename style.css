@@ -358,3 +358,9 @@
   padding:9px 13px!important;
   box-shadow:0 8px 18px rgba(61,43,31,.08);
 }
+
+.closetManageBtn{
+ margin-left:auto!important;
+ display:inline-flex!important;
+}
+.catActionsTop .closetManageBtn{order:99}
