@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 3.0</title>
-  <link rel="stylesheet" href="style.css?v=30">
+  <title>eCloset 3.1</title>
+  <link rel="stylesheet" href="style.css?v=31">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 3.0 — wishlist</small>
+  <small>eCloset 3.1 — wishlist</small>
 </header>
 
 <main>
@@ -218,16 +218,17 @@
     <label class="fieldLabel">Naam</label>
     <input id="wishlistName" class="textInput" placeholder="bv. beige blazer">
 
+    <div id="wishlistCategoryWrap"><label class="fieldLabel">Categorie</label><select id="wishlistCategory" class="textInput"></select></div>
+
     <label class="fieldLabel">Link <span class="optional">(optioneel)</span></label>
     <input id="wishlistLink" class="textInput" placeholder="https://...">
 
     <label class="fieldLabel">Notitie <span class="optional">(optioneel)</span></label>
     <input id="wishlistNote" class="textInput" placeholder="Waarom twijfel je?">
 
-    <div class="wishlistClosetFields" id="wishlistClosetFields">
-      <label class="fieldLabel">Categorie</label>
-      <select id="wishlistCategory" class="textInput"></select>
+    <div id="wishlistCombineArea" class="wishlistCombineArea"></div>
 
+    <div class="wishlistClosetFields" id="wishlistClosetFields">
       <label class="fieldLabel">Kleur</label>
       <div id="wishlistColors" class="choiceRow"></div>
 
@@ -252,6 +253,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>

@@ -951,6 +951,7 @@ async function addWishlistFromFiles(files){
       name:'',
       link:'',
       note:'',
+      category:categories[0]?.id || 'tops',
       created_at:new Date().toISOString()
     },true);
   }catch(e){
@@ -1009,8 +1010,48 @@ function fillWishlistCategorySelect(){
     option.textContent=cat.name;
     select.appendChild(option);
   });
+  select.onchange=()=>{if(currentWishlistItem){currentWishlistItem.category=select.value;renderWishlistCombinations(currentWishlistItem);}};
 }
 
+
+function renderWishlistCombinations(item){
+  const area=document.getElementById('wishlistCombineArea');
+  if(!area)return;
+  area.innerHTML='';
+
+  const title=document.createElement('h3');
+  title.textContent='Combineren met mijn kast';
+  area.appendChild(title);
+
+  const base=document.createElement('div');
+  base.className='wishlistBaseCard';
+  base.innerHTML='<img src="'+(item.image_url||'')+'" alt=""><div><b>'+(item.name||'Wishlist-item')+'</b><span>'+categoryName(item.category||document.getElementById('wishlistCategory')?.value||'tops')+'</span></div>';
+  area.appendChild(base);
+
+  categories
+    .filter(cat=>cat.id !== (item.category || document.getElementById('wishlistCategory')?.value))
+    .forEach(cat=>{
+      const list=itemsFor(cat.id);
+      if(!list.length)return;
+
+      const block=document.createElement('div');
+      block.className='combineBlock';
+      block.innerHTML='<h4>'+cat.name+'</h4>';
+
+      const row=document.createElement('div');
+      row.className='combineRow';
+
+      list.forEach(cloth=>{
+        const card=document.createElement('div');
+        card.className='combineCard';
+        card.innerHTML='<img src="'+cloth.image_url+'" alt=""><span>'+(cloth.name||'Naamloos')+'</span>';
+        row.appendChild(card);
+      });
+
+      block.appendChild(row);
+      area.appendChild(block);
+    });
+}
 function openWishlistModal(item,isNew=false){
   currentWishlistItem=item;
   wishlistDraftImageUrl=item.image_url || '';
@@ -1028,6 +1069,9 @@ function openWishlistModal(item,isNew=false){
   document.getElementById('wishlistNote').value=item.note||'';
 
   fillWishlistCategorySelect();
+  const wishlistCatSelect=document.getElementById('wishlistCategory');
+  if(wishlistCatSelect)wishlistCatSelect.value=item.category || categories[0]?.id || 'tops';
+  renderWishlistCombinations(item);
   renderWishlistColors();
   renderWishlistSeasons();
 
@@ -1051,6 +1095,7 @@ function saveWishlistItem(){
     name:(document.getElementById('wishlistName')?.value||'').trim() || 'Naamloos item',
     link:(document.getElementById('wishlistLink')?.value||'').trim(),
     note:(document.getElementById('wishlistNote')?.value||'').trim(),
+    category:(document.getElementById('wishlistCategory')?.value||'tops'),
     updated_at:new Date().toISOString()
   };
 
@@ -1133,7 +1178,7 @@ function renderPurchase(){
   list.forEach(item=>{
     const card=document.createElement('article');
     card.className='wishlistCard';
-    card.innerHTML='<img src="'+item.image_url+'" alt=""><div class="wishlistCardBody"><h3>'+(item.name||'Naamloos item')+'</h3><p>'+(item.note||'Geen notitie')+'</p>'+(item.link?'<span class="linkPill">Link opgeslagen</span>':'')+'</div>';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><div class="wishlistCardBody"><h3>'+(item.name||'Naamloos item')+'</h3><p>'+(item.note||'Geen notitie')+'</p><span class="catPill">'+categoryName(item.category||'tops')+'</span>'+(item.link?'<span class="linkPill">Link opgeslagen</span>':'')+'</div>';
     card.onclick=()=>openWishlistModal(item,false);
     c.appendChild(card);
   });
