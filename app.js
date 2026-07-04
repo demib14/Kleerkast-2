@@ -886,6 +886,16 @@ function updateCenterCards(){
   });
 }
 
+
+function fixCategoryButton(){
+  const btn=document.getElementById('closetManageCategories');
+  if(btn){
+    btn.textContent='Categorieën aanpassen';
+    btn.classList.add('closetManageBtn');
+    btn.onclick=()=>navigate('settings');
+  }
+}
+
 function renderAll(){
   updateHomeStat();
   updateHomeTilePhotos();
@@ -896,6 +906,7 @@ function renderAll(){
   renderPurchase();
   renderOutfits();
   renderCategories();
+  fixCategoryButton();
   updateFloatingSave();
   setTimeout(updateCenterCards,80);
 }
@@ -946,6 +957,7 @@ async function start(){
   renderAll();
   await loadCloud();
   const last=localStorage.getItem('ecloset_last_screen')||'home';
+  fixCategoryButton();
   if(safeGet(last))navigate(last);
 }
 
