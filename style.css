@@ -14,3 +14,8 @@
 .closetHeader{margin:2px 2px 18px;display:flex;justify-content:space-between;align-items:flex-end}
 .closetHeader h2{font-family:Georgia,serif;font-size:32px;margin:0 0 4px}
 .closetHeader p{margin:0;color:var(--muted);font-size:14px}
+
+.row.isScrolling .item{transition:none!important}
+.row.isScrolling .item.center{transform:none!important;box-shadow:var(--shadow)}
+.item.center{transition:transform .18s ease, opacity .18s ease, box-shadow .18s ease}
+.savedHint{position:fixed;left:50%;bottom:105px;transform:translateX(-50%);background:#477b50;color:white;padding:10px 14px;border-radius:999px;font-weight:800;z-index:90;box-shadow:0 10px 25px rgba(61,43,31,.18)}

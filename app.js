@@ -241,9 +241,11 @@ async function addPhotos(category,files){
 async function deleteItem(id){
   if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
   try{
+    saveScrollPositions();
     await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
     closePhotoModal();
     await loadCloud();
+    restoreScrollPositions();
   }catch(e){
     console.error(e);
     alert('Verwijderen mislukt.');
@@ -252,16 +254,32 @@ async function deleteItem(id){
 
 async function saveModalItem(){
   if(!currentModalItem)return;
+  const editingId=currentModalItem.id;
   const name=(safeGet('modalName')?.value||'').trim();
   const favorite=!!safeGet('modalFav')?.checked;
   try{
-    await api('/rest/v1/clothing?id=eq.'+currentModalItem.id,{
+    saveScrollPositions();
+    await api('/rest/v1/clothing?id=eq.'+editingId,{
       method:'PATCH',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name,color:colorString(modalColorsList),season:modalSeason,favorite})
     });
-    closePhotoModal();
     await loadCloud();
+    restoreScrollPositions();
+
+    const updated=items.find(x=>x.id===editingId);
+    if(updated){
+      currentModalItem=updated;
+      modalColorsList=normalizeColors(updated.color);
+      modalSeason=updated.season||'';
+      safeGet('modalTitle').textContent=updated.name||'Naamloos kledingstuk';
+      safeGet('modalName').value=updated.name||'';
+      safeGet('modalFav').checked=!!updated.favorite;
+      renderModalColors();
+      renderModalSeasons();
+      safeGet('photoModal')?.classList.add('open');
+    }
+    showSavedHint();
   }catch(e){
     console.error(e);
     alert('Opslaan mislukt.');
@@ -277,7 +295,7 @@ function navigate(screen){
   document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.screen===screen));
   window.scrollTo(0,0);
   renderAll();
-  setTimeout(updateCenterCards,80);
+  setTimeout(updateCenterCards,180);
 }
 
 function openDrawer(){safeGet('drawer')?.classList.add('open')}
@@ -381,7 +399,15 @@ function createRow(category,selectable=false,closet=false){
   }else{
     list.forEach(item=>row.appendChild(createCard(item,selectable)));
   }
-  row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
+  row.addEventListener('scroll',()=>{
+    row.classList.add('isScrolling');
+    const key=row.dataset.row||Math.random().toString();
+    clearTimeout(scrollTimers[key]);
+    scrollTimers[key]=setTimeout(()=>{
+      row.classList.remove('isScrolling');
+      updateCenterCards();
+    },140);
+  });
   return row;
 }
 
@@ -639,8 +665,38 @@ function renderModalSeasons(){
   });
 }
 
+
+let scrollMemory={};
+let scrollTimers={};
+
+function saveScrollPositions(){
+  scrollMemory={};
+  document.querySelectorAll('.row[data-row]').forEach(row=>{
+    scrollMemory[row.dataset.row]=row.scrollLeft;
+  });
+}
+
+function restoreScrollPositions(){
+  document.querySelectorAll('.row[data-row]').forEach(row=>{
+    const value=scrollMemory[row.dataset.row];
+    if(typeof value==='number')row.scrollLeft=value;
+  });
+  setTimeout(updateCenterCards,120);
+}
+
+function showSavedHint(){
+  const old=document.querySelector('.savedHint');
+  if(old)old.remove();
+  const div=document.createElement('div');
+  div.className='savedHint';
+  div.textContent='Opgeslagen';
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(),1200);
+}
+
 function updateCenterCards(){
   document.querySelectorAll('.row').forEach(row=>{
+    if(row.classList.contains('isScrolling'))return;
     const cards=[...row.querySelectorAll('.item')];
     if(!cards.length)return;
     const box=row.getBoundingClientRect();
@@ -724,7 +780,7 @@ function renderAll(){
   renderPurchase();
   renderOutfits();
   renderCategories();
-  setTimeout(updateCenterCards,80);
+  setTimeout(updateCenterCards,180);
 }
 
 function bindEvents(){
