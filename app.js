@@ -419,12 +419,46 @@ function collageCountClass(count){
 }
 
 function testCollage(){
-const board=document.getElementById('collagePreview'); if(!board)return;
-board.innerHTML='';
-const t=document.createElement('h3'); t.className='collageTitle'; t.textContent=(document.getElementById('outfitName').value||'Mijn outfit'); board.appendChild(t);
-const g=document.createElement('div'); g.className='smartCollage '+collageCountClass(Object.keys(lockedOutfit).length);
-Object.entries(lockedOutfit).forEach(([cat,item])=>{const s=document.createElement('div');s.className='smartSlot';const i=document.createElement('img');i.src=item.image_url;const b=document.createElement('b');b.textContent=categoryName(cat);s.append(i,b);g.appendChild(s);});
-board.appendChild(g);
+  const board=document.getElementById('collagePreview');
+  if(!board)return;
+
+  const cards=[...document.querySelectorAll('.outfitPreviewCard')];
+  if(!cards.length){
+    alert('Geen outfit-items gevonden.');
+    return;
+  }
+
+  board.innerHTML='';
+  board.classList.remove('hidden');
+
+  const title=document.createElement('h3');
+  title.className='collageTitle';
+  title.textContent=(document.getElementById('outfitName')?.value || 'Mijn outfit');
+  board.appendChild(title);
+
+  const grid=document.createElement('div');
+  grid.className='smartCollage '+collageCountClass(cards.length);
+
+  cards.forEach(card=>{
+    const img=card.querySelector('img');
+    const cat=card.querySelector('b')?.textContent || '';
+    if(!img)return;
+
+    const slot=document.createElement('div');
+    slot.className='smartSlot';
+
+    const clone=document.createElement('img');
+    clone.src=img.src;
+
+    const label=document.createElement('b');
+    label.textContent=cat;
+
+    slot.append(clone,label);
+    grid.appendChild(slot);
+  });
+
+  board.appendChild(grid);
+  board.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 
@@ -441,14 +475,35 @@ function autoShowCollageOnOpen(){
 }
 
 function openOutfitModal(){
-const locked=Object.entries(lockedOutfit||{});
-if(!locked.length){alert('Kies eerst minstens één kledingstuk.');return;}
-document.getElementById('outfitName').value='';
-document.getElementById('outfitNote').value='';
-const board=document.getElementById('collagePreview');
-board.innerHTML='';board.classList.remove('hidden');
-document.getElementById('outfitModal').classList.add('open');
-testCollage();
+  const locked=Object.entries(lockedOutfit||{});
+  if(!locked.length){
+    alert('Kies eerst minstens één kledingstuk.');
+    return;
+  }
+
+  const preview=document.getElementById('outfitPreview');
+  if(!preview)return;
+  preview.innerHTML='';
+
+  const preferred=['tops','bottoms','dresses','jackets','shoes','bags','accessories'];
+  const ordered=[
+    ...preferred.filter(cat=>lockedOutfit[cat]).map(cat=>[cat,lockedOutfit[cat]]),
+    ...locked.filter(([cat])=>!preferred.includes(cat))
+  ];
+
+  ordered.forEach(([cat,item])=>{
+    const card=document.createElement('div');
+    card.className='outfitPreviewCard';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span>';
+    preview.appendChild(card);
+  });
+
+  document.getElementById('outfitName').value='';
+  document.getElementById('outfitNote').value='';
+  const bgStatus=document.getElementById('bgTestStatus'); if(bgStatus)bgStatus.textContent='Tip: tik op één of meerdere items om alleen die opnieuw te testen.';
+  const board=document.getElementById('collagePreview'); if(board){board.classList.add('hidden');board.innerHTML='';}
+  document.getElementById('outfitModal').classList.add('open');
+  autoShowCollageOnOpen();
 }
 
 function closeOutfitModal(){
@@ -648,7 +703,8 @@ function updateHomeTilePhotos(){
 
   const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
   const firstItem=items[0]?.image_url || '';
-  const wishlistItem=items.find(x=>(x.category||'')==='purchase')?.image_url || '';
+  const wishlistItems=wishlistList();
+  const wishlistItem=wishlistItems[0]?.image_url || '';
 
   if(document.getElementById('tileInfo-closet')){
     document.getElementById('tileInfo-closet').textContent=items.length+' kledingstukken';
@@ -660,7 +716,7 @@ function updateHomeTilePhotos(){
     document.getElementById('tileInfo-logbook').textContent='Binnenkort: kalender en statistieken';
   }
   if(document.getElementById('tileInfo-purchase')){
-    document.getElementById('tileInfo-purchase').textContent=wishlistItem?'1 item op je wishlist':'Nog geen wishlist-items';
+    document.getElementById('tileInfo-purchase').textContent=wishlistItems.length?wishlistItems.length+' wishlist-item'+(wishlistItems.length===1?'':'s'):'Nog geen wishlist-items';
   }
 
   // Mijn kast: eerste kledingstuk uit kast
@@ -860,14 +916,227 @@ function renderRecent(){
   }
 }
 
+
+let currentWishlistItem=null;
+let wishlistDraftImageUrl='';
+let wishlistSelectedColor='';
+let wishlistSelectedSeason='';
+let wishlistMode='edit';
+
+function wishlistList(){
+  try{return JSON.parse(localStorage.getItem('ecloset_wishlist')||'[]')}catch(e){return []}
+}
+
+function saveWishlistList(list){
+  localStorage.setItem('ecloset_wishlist',JSON.stringify(list));
+}
+
+function readFileAsDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>resolve(e.target.result);
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function addWishlistFromFiles(files){
+  const file=(files||[])[0];
+  if(!file)return;
+  try{
+    const imageUrl=await uploadImage(file);
+    openWishlistModal({
+      id:Date.now(),
+      image_url:imageUrl,
+      name:'',
+      link:'',
+      note:'',
+      created_at:new Date().toISOString()
+    },true);
+  }catch(e){
+    console.error(e);
+    alert('Foto toevoegen mislukt.');
+  }
+}
+
+function renderWishlistColors(){
+  const box=document.getElementById('wishlistColors');
+  if(!box)return;
+  box.innerHTML='';
+  COLORS.forEach(color=>{
+    const b=document.createElement('button');
+    b.className='colorChoice '+(wishlistSelectedColor===color.id?'active':'');
+    const dot=document.createElement('span');
+    dot.className='colorDot';
+    dot.style.background=color.hex;
+    b.appendChild(dot);
+    b.append(color.label);
+    b.onclick=()=>{
+      wishlistSelectedColor=wishlistSelectedColor===color.id?'':color.id;
+      renderWishlistColors();
+    };
+    box.appendChild(b);
+  });
+}
+
+function renderWishlistSeasons(){
+  const box=document.getElementById('wishlistSeasons');
+  if(!box)return;
+  box.innerHTML='';
+
+  const none=document.createElement('button');
+  none.className='seasonChoice '+(!wishlistSelectedSeason?'active':'');
+  none.textContent='Geen';
+  none.onclick=()=>{wishlistSelectedSeason='';renderWishlistSeasons()};
+  box.appendChild(none);
+
+  SEASONS.forEach(season=>{
+    const b=document.createElement('button');
+    b.className='seasonChoice '+(wishlistSelectedSeason===season.id?'active':'');
+    b.textContent=season.label;
+    b.onclick=()=>{wishlistSelectedSeason=season.id;renderWishlistSeasons()};
+    box.appendChild(b);
+  });
+}
+
+function fillWishlistCategorySelect(){
+  const select=document.getElementById('wishlistCategory');
+  if(!select)return;
+  select.innerHTML='';
+  categories.forEach(cat=>{
+    const option=document.createElement('option');
+    option.value=cat.id;
+    option.textContent=cat.name;
+    select.appendChild(option);
+  });
+}
+
+function openWishlistModal(item,isNew=false){
+  currentWishlistItem=item;
+  wishlistDraftImageUrl=item.image_url || '';
+  wishlistMode='edit';
+  wishlistSelectedColor=item.color || '';
+  wishlistSelectedSeason=item.season || '';
+
+  const card=document.querySelector('#wishlistModal .modalCard');
+  if(card)card.classList.remove('toCloset');
+
+  document.getElementById('wishlistModalTitle').textContent=isNew?'Nieuw wishlist-item':'Wishlist-item';
+  document.getElementById('wishlistImg').src=wishlistDraftImageUrl;
+  document.getElementById('wishlistName').value=item.name||'';
+  document.getElementById('wishlistLink').value=item.link||'';
+  document.getElementById('wishlistNote').value=item.note||'';
+
+  fillWishlistCategorySelect();
+  renderWishlistColors();
+  renderWishlistSeasons();
+
+  document.getElementById('wishlistModal').classList.add('open');
+}
+
+function closeWishlistModal(){
+  const modal=document.getElementById('wishlistModal');
+  if(modal)modal.classList.remove('open');
+  currentWishlistItem=null;
+  wishlistMode='edit';
+}
+
+function saveWishlistItem(){
+  if(!currentWishlistItem)return;
+
+  const list=wishlistList();
+  const item={
+    ...currentWishlistItem,
+    image_url:wishlistDraftImageUrl,
+    name:(document.getElementById('wishlistName')?.value||'').trim() || 'Naamloos item',
+    link:(document.getElementById('wishlistLink')?.value||'').trim(),
+    note:(document.getElementById('wishlistNote')?.value||'').trim(),
+    updated_at:new Date().toISOString()
+  };
+
+  const idx=list.findIndex(x=>String(x.id)===String(item.id));
+  if(idx>=0)list[idx]=item;
+  else list.unshift(item);
+
+  saveWishlistList(list);
+  currentWishlistItem=item;
+  renderPurchase();
+  updateHomeTilePhotos();
+  closeWishlistModal();
+}
+
+function deleteWishlistItem(){
+  if(!currentWishlistItem)return;
+  if(!confirm('Dit wishlist-item verwijderen?'))return;
+  const list=wishlistList().filter(x=>String(x.id)!==String(currentWishlistItem.id));
+  saveWishlistList(list);
+  closeWishlistModal();
+  renderPurchase();
+  updateHomeTilePhotos();
+}
+
+async function addWishlistItemToCloset(){
+  if(!currentWishlistItem)return;
+
+  const card=document.querySelector('#wishlistModal .modalCard');
+  if(wishlistMode!=='toCloset'){
+    wishlistMode='toCloset';
+    if(card)card.classList.add('toCloset');
+    return;
+  }
+
+  const category=document.getElementById('wishlistCategory')?.value || 'tops';
+  const name=(document.getElementById('wishlistName')?.value||'').trim() || 'Naamloos item';
+
+  try{
+    await api('/rest/v1/clothing',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({
+        category,
+        name,
+        image_url:currentWishlistItem.image_url,
+        brand:'',
+        color:wishlistSelectedColor,
+        season:wishlistSelectedSeason,
+        favorite:false,
+        notes:(document.getElementById('wishlistNote')?.value||'').trim()
+      })
+    });
+
+    const list=wishlistList().filter(x=>String(x.id)!==String(currentWishlistItem.id));
+    saveWishlistList(list);
+    closeWishlistModal();
+    await loadCloud();
+    navigate('closet');
+    alert('Toegevoegd aan Mijn kast.');
+  }catch(e){
+    console.error(e);
+    alert('Toevoegen aan Mijn kast mislukt.');
+  }
+}
+
 function renderPurchase(){
   const c=safeGet('purchaseContent');
   if(!c)return;
   c.innerHTML='';
-  const e=document.createElement('div');
-  e.className='empty';
-  e.textContent='Nieuwe aankoop volgt later';
-  c.appendChild(e);
+
+  const list=wishlistList();
+  if(!list.length){
+    const e=document.createElement('div');
+    e.className='empty';
+    e.textContent='Nog geen wishlist-items';
+    c.appendChild(e);
+    return;
+  }
+
+  list.forEach(item=>{
+    const card=document.createElement('article');
+    card.className='wishlistCard';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><div class="wishlistCardBody"><h3>'+(item.name||'Naamloos item')+'</h3><p>'+(item.note||'Geen notitie')+'</p>'+(item.link?'<span class="linkPill">Link opgeslagen</span>':'')+'</div>';
+    card.onclick=()=>openWishlistModal(item,false);
+    c.appendChild(card);
+  });
 }
 
 
@@ -1528,11 +1797,8 @@ function bindEvents(){
   if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
   if(safeGet('floatingSaveOutfit'))safeGet('floatingSaveOutfit').onclick=saveLockedOutfit;
 
-  if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
-  if(safeGet('file-purchase'))safeGet('file-purchase').onchange=e=>{
-    addPhotos('purchase',e.target.files);
-    e.target.value='';
-  };
+  if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>safeGet('file-purchase')?.click();
+  if(safeGet('file-purchase'))safeGet('file-purchase').onchange=e=>{addWishlistFromFiles(e.target.files);e.target.value='';};
 
   if(safeGet('closePhotoModal'))safeGet('closePhotoModal').onclick=closePhotoModal;
   if(safeGet('photoModal'))safeGet('photoModal').onclick=e=>{
@@ -1560,6 +1826,14 @@ function bindEvents(){
   if(safeGet('closeItemPickerModal'))safeGet('closeItemPickerModal').onclick=closeItemPicker;
   const itemPickerModal=document.getElementById('itemPickerModal');
   if(itemPickerModal)itemPickerModal.onclick=e=>{if(e.target.id==='itemPickerModal')closeItemPicker()};
+
+  if(safeGet('closeWishlistModal'))safeGet('closeWishlistModal').onclick=closeWishlistModal;
+  if(safeGet('cancelWishlistModal'))safeGet('cancelWishlistModal').onclick=closeWishlistModal;
+  if(safeGet('saveWishlistItem'))safeGet('saveWishlistItem').onclick=saveWishlistItem;
+  if(safeGet('deleteWishlistItem'))safeGet('deleteWishlistItem').onclick=deleteWishlistItem;
+  if(safeGet('wishlistToCloset'))safeGet('wishlistToCloset').onclick=addWishlistItemToCloset;
+  const wishlistModal=document.getElementById('wishlistModal');
+  if(wishlistModal)wishlistModal.onclick=e=>{if(e.target.id==='wishlistModal')closeWishlistModal()};
 }
 
 async function start(){

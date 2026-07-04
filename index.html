@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 2.13</title>
-  <link rel="stylesheet" href="style.css?v=213">
+  <title>eCloset 3.0</title>
+  <link rel="stylesheet" href="style.css?v=30">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 2.13 — outfits bewerken</small>
+  <small>eCloset 3.0 — wishlist</small>
 </header>
 
 <main>
@@ -93,10 +93,13 @@
   </section>
 
   <section id="purchase" class="screen">
-    <div class="panel yellow"><h2>Wishlist</h2><p>Bewaar kleding waarover je twijfelt of die je misschien wilt kopen.</p></div>
-    <div class="sectionLine"><h2>Wishlist</h2><button id="addPurchase">Foto toevoegen</button></div>
-    <input id="file-purchase" type="file" accept="image/*" multiple>
-    <div id="purchaseContent" class="row"></div>
+    <div class="wishlistHeader">
+      <h2>Wishlist</h2>
+      <p>Kleding waarover je twijfelt of die je misschien wilt toevoegen aan je kast.</p>
+      <button id="addPurchase">Nieuw wishlist-item</button>
+    </div>
+    <input id="file-purchase" type="file" accept="image/*">
+    <div id="purchaseContent" class="wishlistGrid"></div>
   </section>
 
   <section id="settings" class="screen">
@@ -154,7 +157,9 @@
     <h2>Outfit bewaren</h2>
     <p class="modalIntro">Controleer je gekozen kledingstukken en geef je outfit eventueel een naam.</p>
 
-    <div id="collagePreview" class="collagePreview"></div>
+    <div id="outfitPreview" class="outfitPreview"></div>
+    <button id="testCollage" class="light bgTestBtn">Slimme collage testen</button>
+    <div id="collagePreview" class="collagePreview hidden"></div>
 
     <label class="fieldLabel">Naam outfit</label>
     <input id="outfitName" class="textInput" placeholder="bv. Casual werkdag">
@@ -203,6 +208,42 @@
   </div>
 </div>
 
+
+<div id="wishlistModal" class="modal">
+  <div class="modalCard wishlistModalCard">
+    <button class="modalClose" id="closeWishlistModal">×</button>
+    <h2 id="wishlistModalTitle">Wishlist-item</h2>
+    <img id="wishlistImg" alt="">
+
+    <label class="fieldLabel">Naam</label>
+    <input id="wishlistName" class="textInput" placeholder="bv. beige blazer">
+
+    <label class="fieldLabel">Link <span class="optional">(optioneel)</span></label>
+    <input id="wishlistLink" class="textInput" placeholder="https://...">
+
+    <label class="fieldLabel">Notitie <span class="optional">(optioneel)</span></label>
+    <input id="wishlistNote" class="textInput" placeholder="Waarom twijfel je?">
+
+    <div class="wishlistClosetFields" id="wishlistClosetFields">
+      <label class="fieldLabel">Categorie</label>
+      <select id="wishlistCategory" class="textInput"></select>
+
+      <label class="fieldLabel">Kleur</label>
+      <div id="wishlistColors" class="choiceRow"></div>
+
+      <label class="fieldLabel">Seizoen</label>
+      <div id="wishlistSeasons" class="choiceRow"></div>
+    </div>
+
+    <div class="modalActions">
+      <button id="saveWishlistItem">Opslaan</button>
+      <button id="wishlistToCloset">Toevoegen aan mijn kast</button>
+      <button id="deleteWishlistItem" class="danger">Verwijderen</button>
+      <button id="cancelWishlistModal" class="light">Annuleren</button>
+    </div>
+  </div>
+</div>
+
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
   <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
@@ -211,6 +252,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=213"></script>
+<script src="app.js?v=30"></script>
 </body>
 </html>
