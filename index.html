@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.5g</title>
+  <title>eCloset 1.6</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,18 +15,18 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.5g — detailvenster</small>
+  <small>eCloset 1.6 — detailvenster</small>
 </header>
 
 <main>
   <section id="home" class="screen active">
-    <div id="cloudStatus" class="cloud">☁️ Cloud laden...</div>
+    <div id="homeStat" class="homeStat"><span class="homeStatIcon">⌒</span><div><strong id="homeItemCount">0</strong><small>items in je kast</small></div></div>
 
-    <div class="ai" id="aiBox">
+    <div class="ai closed compactAi" id="aiBox">
       <div class="aihead">
         <b>AI</b>
-        <div><small>Hallo Demi</small><h2>Hoe kan ik je vandaag helpen?</h2></div>
-        <button id="toggleAi">⌃</button>
+        <div><h2>Hoe kan ik je vandaag helpen?</h2></div>
+        <button id="toggleAi">⌄</button>
       </div>
       <div class="aibody">
         <input placeholder="Stel me een vraag...">
@@ -39,10 +39,10 @@
     </div>
 
     <div class="grid">
-      <button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p>Bekijk en beheer je kleding</p><div class="photo closet"></div></button>
-      <button class="tile blue" data-screen="builder"><h3>Nieuwe outfit</h3><p>Stel een outfit samen</p><div class="photo builder"></div></button>
-      <button class="tile pink" data-screen="outfits"><h3>Outfits</h3><p>Bewaarde combinaties</p><div class="photo outfits"></div></button>
-      <button class="tile yellow" data-screen="purchase"><h3>Nieuwe aankoop</h3><p>Bewaar twijfels en ideeën</p><div class="photo purchase"></div></button>
+      <button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p>Bekijk en beheer je kleding</p><div class="photo closet" id="tilePhoto-closet"></div></button>
+      <button class="tile blue" data-screen="builder"><h3>Nieuwe outfit</h3><p>Stel een outfit samen</p><div class="photo builder" id="tilePhoto-builder"></div></button>
+      <button class="tile pink" data-screen="outfits"><h3>Outfits</h3><p>Bewaarde combinaties</p><div class="photo outfits" id="tilePhoto-outfits"></div></button>
+      <button class="tile yellow" data-screen="purchase"><h3>Nieuwe aankoop</h3><p>Bewaar twijfels en ideeën</p><div class="photo purchase" id="tilePhoto-purchase"></div></button>
     </div>
 
     <h2 class="section">Laatst toegevoegd</h2>

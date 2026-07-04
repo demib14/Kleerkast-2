@@ -770,7 +770,44 @@ function clearOutfit(){
   document.querySelectorAll('.item.active').forEach(c=>c.classList.remove('active'));
 }
 
+
+function updateHomeStat(){
+  const count=document.getElementById('homeItemCount');
+  if(count)count.textContent=items.length;
+}
+
+function firstImageFor(category){
+  const item=items.find(x=>(x.category||'tops')===category);
+  return item ? item.image_url : '';
+}
+
+function updateHomeTilePhotos(){
+  const closet=document.getElementById('tilePhoto-closet');
+  const builder=document.getElementById('tilePhoto-builder');
+  const outfits=document.getElementById('tilePhoto-outfits');
+  const purchase=document.getElementById('tilePhoto-purchase');
+
+  const top=firstImageFor('tops');
+  const bottom=firstImageFor('bottoms');
+  const shoes=firstImageFor('shoes');
+  const any=items[0]?.image_url || '';
+
+  [
+    [closet, any],
+    [builder, top || bottom || any],
+    [outfits, bottom || top || any],
+    [purchase, shoes || any]
+  ].forEach(([el,url])=>{
+    if(el && url){
+      el.style.backgroundImage='url("'+url+'")';
+      el.classList.add('hasOwnPhoto');
+    }
+  });
+}
+
 function renderAll(){
+  updateHomeStat();
+  updateHomeTilePhotos();
   renderStats();
   renderCloset();
   renderBuilder();
