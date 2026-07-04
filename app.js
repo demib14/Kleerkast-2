@@ -419,46 +419,12 @@ function collageCountClass(count){
 }
 
 function testCollage(){
-  const board=document.getElementById('collagePreview');
-  if(!board)return;
-
-  const cards=[...document.querySelectorAll('.outfitPreviewCard')];
-  if(!cards.length){
-    alert('Geen outfit-items gevonden.');
-    return;
-  }
-
-  board.innerHTML='';
-  board.classList.remove('hidden');
-
-  const title=document.createElement('h3');
-  title.className='collageTitle';
-  title.textContent=(document.getElementById('outfitName')?.value || 'Mijn outfit');
-  board.appendChild(title);
-
-  const grid=document.createElement('div');
-  grid.className='smartCollage '+collageCountClass(cards.length);
-
-  cards.forEach(card=>{
-    const img=card.querySelector('img');
-    const cat=card.querySelector('b')?.textContent || '';
-    if(!img)return;
-
-    const slot=document.createElement('div');
-    slot.className='smartSlot';
-
-    const clone=document.createElement('img');
-    clone.src=img.src;
-
-    const label=document.createElement('b');
-    label.textContent=cat;
-
-    slot.append(clone,label);
-    grid.appendChild(slot);
-  });
-
-  board.appendChild(grid);
-  board.scrollIntoView({behavior:'smooth',block:'nearest'});
+const board=document.getElementById('collagePreview'); if(!board)return;
+board.innerHTML='';
+const t=document.createElement('h3'); t.className='collageTitle'; t.textContent=(document.getElementById('outfitName').value||'Mijn outfit'); board.appendChild(t);
+const g=document.createElement('div'); g.className='smartCollage '+collageCountClass(Object.keys(lockedOutfit).length);
+Object.entries(lockedOutfit).forEach(([cat,item])=>{const s=document.createElement('div');s.className='smartSlot';const i=document.createElement('img');i.src=item.image_url;const b=document.createElement('b');b.textContent=categoryName(cat);s.append(i,b);g.appendChild(s);});
+board.appendChild(g);
 }
 
 
@@ -475,35 +441,14 @@ function autoShowCollageOnOpen(){
 }
 
 function openOutfitModal(){
-  const locked=Object.entries(lockedOutfit||{});
-  if(!locked.length){
-    alert('Kies eerst minstens één kledingstuk.');
-    return;
-  }
-
-  const preview=document.getElementById('outfitPreview');
-  if(!preview)return;
-  preview.innerHTML='';
-
-  const preferred=['tops','bottoms','dresses','jackets','shoes','bags','accessories'];
-  const ordered=[
-    ...preferred.filter(cat=>lockedOutfit[cat]).map(cat=>[cat,lockedOutfit[cat]]),
-    ...locked.filter(([cat])=>!preferred.includes(cat))
-  ];
-
-  ordered.forEach(([cat,item])=>{
-    const card=document.createElement('div');
-    card.className='outfitPreviewCard';
-    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span>';
-    preview.appendChild(card);
-  });
-
-  document.getElementById('outfitName').value='';
-  document.getElementById('outfitNote').value='';
-  const bgStatus=document.getElementById('bgTestStatus'); if(bgStatus)bgStatus.textContent='Tip: tik op één of meerdere items om alleen die opnieuw te testen.';
-  const board=document.getElementById('collagePreview'); if(board){board.classList.add('hidden');board.innerHTML='';}
-  document.getElementById('outfitModal').classList.add('open');
-  autoShowCollageOnOpen();
+const locked=Object.entries(lockedOutfit||{});
+if(!locked.length){alert('Kies eerst minstens één kledingstuk.');return;}
+document.getElementById('outfitName').value='';
+document.getElementById('outfitNote').value='';
+const board=document.getElementById('collagePreview');
+board.innerHTML='';board.classList.remove('hidden');
+document.getElementById('outfitModal').classList.add('open');
+testCollage();
 }
 
 function closeOutfitModal(){
