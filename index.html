@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 2.5</title>
-  <link rel="stylesheet" href="style.css?v=25">
+  <title>eCloset 2.6</title>
+  <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 2.5 — achtergrondtest</small>
+  <small>eCloset 2.6 — outfit collage</small>
 </header>
 
 <main>
@@ -154,11 +154,7 @@
     <h2>Outfit bewaren</h2>
     <p class="modalIntro">Controleer je gekozen kledingstukken en geef je outfit eventueel een naam.</p>
 
-    <div id="outfitPreview" class="outfitPreview"></div>
-    <button id="testOutfitBackgrounds" class="light bgTestBtn">Achtergrond testen</button>
-    <p id="bgTestStatus" class="bgTestStatus">Tip: tik op één of meerdere items om alleen die opnieuw te testen.</p>
-    <button id="testCollage" class="light bgTestBtn">Slimme collage testen</button>
-    <div id="collagePreview" class="collagePreview hidden"></div>
+    <div id="finalOutfitCollage" class="finalOutfitCollage"></div>
 
     <label class="fieldLabel">Naam outfit</label>
     <input id="outfitName" class="textInput" placeholder="bv. Casual werkdag">
@@ -167,7 +163,7 @@
     <input id="outfitNote" class="textInput" placeholder="Optioneel">
 
     <div class="modalActions">
-      <button id="confirmSaveOutfit">Definitief opslaan</button>
+      <button id="confirmSaveOutfit">Outfit opslaan</button>
       <button id="cancelOutfitModal" class="light">Annuleren</button>
     </div>
   </div>
@@ -181,6 +177,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=25"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>
