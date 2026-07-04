@@ -774,6 +774,11 @@ function clearOutfit(){
 function updateHomeStat(){
   const count=document.getElementById('homeItemCount');
   if(count)count.textContent=items.length;
+  const outfits=document.getElementById('homeOutfitCount');
+  if(outfits){
+    const saved=Array.isArray(window.savedOutfits) ? window.savedOutfits.length : 0;
+    outfits.textContent=saved;
+  }
 }
 
 function firstImageFor(category){
@@ -823,7 +828,7 @@ function bindEvents(){
     btn.onclick=()=>navigate(btn.dataset.screen);
   });
 
-  if(safeGet('settingsBtn'))safeGet('settingsBtn').onclick=openDrawer;
+  if(safeGet('settingsBtn'))safeGet('settingsBtn').onclick=()=>{};
   
   if(safeGet('closeDrawer'))safeGet('closeDrawer').onclick=closeDrawer;
 
@@ -840,6 +845,7 @@ function bindEvents(){
   if(safeGet('drawerRefresh'))safeGet('drawerRefresh').onclick=loadCloud;
   if(safeGet('saveOutfit'))safeGet('saveOutfit').onclick=saveOutfit;
   if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
+  if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
 
   if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
   if(safeGet('file-purchase'))safeGet('file-purchase').onchange=e=>{

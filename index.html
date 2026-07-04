@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.6</title>
+  <title>eCloset 1.6b</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,12 +15,15 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.6 — detailvenster</small>
+  <small>eCloset 1.6b — detailvenster</small>
 </header>
 
 <main>
   <section id="home" class="screen active">
-    <div id="homeStat" class="homeStat"><span class="homeStatIcon">⌒</span><div><strong id="homeItemCount">0</strong><small>items in je kast</small></div></div>
+    <div class="homeStats">
+      <div class="homeStat"><span class="homeStatIcon">⌒</span><div><strong id="homeItemCount">0</strong><small>items in je kast</small></div></div>
+      <div class="homeStat"><span class="homeStatIcon">♡</span><div><strong id="homeOutfitCount">0</strong><small>outfits bewaard</small></div></div>
+    </div>
 
     <div class="ai closed compactAi" id="aiBox">
       <div class="aihead">
@@ -53,7 +56,7 @@
     <div class="closetHeader">
       <div>
         <h2>Mijn kast</h2>
-        <p id="closetSummary">Cloud laden...</p>
+        <p id="closetSummary">Cloud laden...</p><button id="closetManageCategories" class="filterToggle">Categorieën</button>
       </div>
     </div>
     <div id="closetContent"></div>

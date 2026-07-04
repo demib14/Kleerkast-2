@@ -95,3 +95,6 @@
   background-size:cover!important;
   background-position:center!important;
 }
+
+.homeStats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.homeStats .homeStat{margin-bottom:0}
