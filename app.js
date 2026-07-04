@@ -450,18 +450,59 @@ function firstImageFor(category){
 }
 
 function updateHomeTilePhotos(){
-  const pairs=[
-    [safeGet('tilePhoto-closet'),items[0]?.image_url||''],
-    [safeGet('tilePhoto-builder'),firstImageFor('tops')||firstImageFor('bottoms')||items[0]?.image_url||''],
-    [safeGet('tilePhoto-outfits'),firstImageFor('bottoms')||firstImageFor('tops')||items[0]?.image_url||''],
-    [safeGet('tilePhoto-purchase'),firstImageFor('shoes')||items[0]?.image_url||'']
-  ];
-  pairs.forEach(([el,url])=>{
-    if(el&&url){
-      el.style.backgroundImage='url("'+url+'")';
-      el.classList.add('hasOwnPhoto');
+  const closet=document.getElementById('tilePhoto-closet');
+  const outfitsTile=document.getElementById('tilePhoto-outfits');
+  const logbook=document.getElementById('tilePhoto-logbook');
+  const purchase=document.getElementById('tilePhoto-purchase');
+
+  const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+  const firstItem=items[0]?.image_url || '';
+  const wishlistItem=items.find(x=>(x.category||'')==='purchase')?.image_url || '';
+
+  if(document.getElementById('tileInfo-closet')){
+    document.getElementById('tileInfo-closet').textContent=items.length+' kledingstukken';
+  }
+  if(document.getElementById('tileInfo-outfits')){
+    document.getElementById('tileInfo-outfits').textContent=saved.length+' outfits bewaard';
+  }
+  if(document.getElementById('tileInfo-logbook')){
+    document.getElementById('tileInfo-logbook').textContent='Binnenkort: kalender en statistieken';
+  }
+  if(document.getElementById('tileInfo-purchase')){
+    document.getElementById('tileInfo-purchase').textContent=wishlistItem?'1 item op je wishlist':'Nog geen wishlist-items';
+  }
+
+  // Mijn kast: eerste kledingstuk uit kast
+  if(closet && firstItem){
+    closet.style.backgroundImage='url("'+firstItem+'")';
+    closet.classList.add('hasOwnPhoto');
+  }
+
+  // Outfits: eerste item uit laatst bewaarde outfit als preview
+  if(outfitsTile && saved.length){
+    const last=saved[saved.length-1];
+    const firstId=Object.values(last.items||{})[0];
+    const item=items.find(x=>String(x.id)===String(firstId));
+    if(item){
+      outfitsTile.style.backgroundImage='url("'+item.image_url+'")';
+      outfitsTile.classList.add('hasOwnPhoto');
     }
-  });
+  }else if(outfitsTile && firstItem){
+    outfitsTile.style.backgroundImage='url("'+firstItem+'")';
+    outfitsTile.classList.add('hasOwnPhoto');
+  }
+
+  // Logboek: later laatst gedragen, voorlopig eerste kledingstuk
+  if(logbook && firstItem){
+    logbook.style.backgroundImage='url("'+firstItem+'")';
+    logbook.classList.add('hasOwnPhoto');
+  }
+
+  // Wishlist: later twijfels, voorlopig wishlist/purchase of fallback
+  if(purchase && (wishlistItem||firstItem)){
+    purchase.style.backgroundImage='url("'+(wishlistItem||firstItem)+'")';
+    purchase.classList.add('hasOwnPhoto');
+  }
 }
 
 function renderStats(){

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.8f</title>
-  <link rel="stylesheet" href="style.css?v=18f">
+  <title>eCloset 1.9</title>
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.8f — outfit selectie</small>
+  <small>eCloset 1.9 — nieuwe home</small>
 </header>
 
 <main>
@@ -42,10 +42,10 @@
     </div>
 
     <div class="grid">
-      <button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p>Bekijk en beheer je kleding</p><div class="photo closet" id="tilePhoto-closet"></div></button>
-      <button class="tile blue" data-screen="builder"><h3>Nieuwe outfit</h3><p>Stel een outfit samen</p><div class="photo builder" id="tilePhoto-builder"></div></button>
-      <button class="tile pink" data-screen="outfits"><h3>Outfits</h3><p>Bewaarde combinaties</p><div class="photo outfits" id="tilePhoto-outfits"></div></button>
-      <button class="tile yellow" data-screen="purchase"><h3>Nieuwe aankoop</h3><p>Bewaar twijfels en ideeën</p><div class="photo purchase" id="tilePhoto-purchase"></div></button>
+      <button class="tile green" data-screen="closet"><h3>Mijn kast</h3><p id="tileInfo-closet">Je digitale garderobe</p><div class="photo closet" id="tilePhoto-closet"></div></button>
+      <button class="tile blue" data-screen="outfits"><h3>Outfits</h3><p id="tileInfo-outfits">Bewaarde combinaties</p><div class="photo builder" id="tilePhoto-outfits"></div></button>
+      <button class="tile pink" data-screen="logbook"><h3>Outfitlogboek</h3><p id="tileInfo-logbook">Draaghistoriek en statistieken</p><div class="photo outfits" id="tilePhoto-logbook"></div></button>
+      <button class="tile yellow" data-screen="purchase"><h3>Wishlist</h3><p id="tileInfo-purchase">Twijfels en ideeën</p><div class="photo purchase" id="tilePhoto-purchase"></div></button>
     </div>
 
     <h2 class="section">Laatst toegevoegd</h2>
@@ -83,9 +83,18 @@
     <div id="savedOutfits"></div>
   </section>
 
+  
+  <section id="logbook" class="screen">
+    <div class="panel yellow">
+      <h2>Outfitlogboek</h2>
+      <p>Hier komt later je kalender, draaghistoriek en statistieken.</p>
+    </div>
+    <div class="empty">Nog geen gedragen outfits bijgehouden</div>
+  </section>
+
   <section id="purchase" class="screen">
-    <div class="panel yellow"><h2>Nieuwe aankoop</h2><p>Bewaar kleding waarover je twijfelt.</p></div>
-    <div class="sectionLine"><h2>Twijfels</h2><button id="addPurchase">Foto toevoegen</button></div>
+    <div class="panel yellow"><h2>Wishlist</h2><p>Bewaar kleding waarover je twijfelt of die je misschien wilt kopen.</p></div>
+    <div class="sectionLine"><h2>Wishlist</h2><button id="addPurchase">Foto toevoegen</button></div>
     <input id="file-purchase" type="file" accept="image/*" multiple>
     <div id="purchaseContent" class="row"></div>
   </section>
@@ -141,11 +150,11 @@
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
   <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
-  <button class="nav" data-screen="builder">♙<br>Nieuwe outfit</button>
   <button class="nav" data-screen="outfits">♡<br>Outfits</button>
-  <button class="nav" data-screen="purchase">☆<br>Nieuwe aankoop</button>
+  <button class="nav" data-screen="logbook">◷<br>Logboek</button>
+  <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=18f"></script>
+<script src="app.js?v=19"></script>
 </body>
 </html>

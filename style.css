@@ -382,3 +382,7 @@
   padding:9px 13px!important;
   box-shadow:0 8px 18px rgba(61,43,31,.08)!important;
 }
+
+/* 1.9 Home tiles */
+.tile h3{font-size:27px}
+.tile p[id^="tileInfo-"]{font-weight:700;color:#6f665f}
