@@ -423,3 +423,28 @@
   color:var(--muted);
   font-size:12px;
 }
+
+/* 2.1 background removal test */
+.bgTestBtn{
+  width:100%;
+  margin:4px 0 10px!important;
+}
+.bgTestStatus{
+  margin:4px 0 12px;
+  color:var(--muted);
+  font-size:13px;
+}
+.outfitPreviewCard.bgProcessed{
+  background:
+    linear-gradient(45deg,#f7efe7 25%,transparent 25%),
+    linear-gradient(-45deg,#f7efe7 25%,transparent 25%),
+    linear-gradient(45deg,transparent 75%,#f7efe7 75%),
+    linear-gradient(-45deg,transparent 75%,#f7efe7 75%);
+  background-size:18px 18px;
+  background-position:0 0,0 9px,9px -9px,-9px 0;
+  border-color:rgba(152,113,78,.35);
+}
+.outfitPreviewCard.bgProcessed img{
+  object-fit:contain;
+  background:transparent;
+}
