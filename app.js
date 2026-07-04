@@ -283,6 +283,7 @@ async function saveModalItem(){
 
     updateLocalItem(id,{name,color:newColor,season:newSeason,favorite});
     currentModalItem=items.find(x=>x.id===id)||currentModalItem;
+    updateVisibleItemCard(currentModalItem);
 
     // Alleen tekst in modal aanpassen, geen volledige herlaad van de lijst.
     safeGet('modalTitle').textContent=name||'Naamloos kledingstuk';
@@ -340,31 +341,8 @@ function seasonLabel(id){
   return s?s.label:id;
 }
 
-function createCard(item,selectable=false){
-  const card=document.createElement('article');
-  card.className='item';
-  const img=document.createElement('img');
-  img.src=item.image_url;
-  img.onclick=()=>{
-    if(selectable){
-      selected[item.category]=item.id;
-      const slot=safeGet('slot-'+item.category);
-      if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
-      document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
-      card.classList.add('active');
-    }else{
-      openPhotoModal(item);
-    }
-  };
-  card.appendChild(img);
 
-  if(item.name){
-    const name=document.createElement('div');
-    name.className='itemName';
-    name.textContent=item.name;
-    card.appendChild(name);
-  }
-
+function buildBadges(item){
   const badges=document.createElement('div');
   badges.className='itemBadges';
 
@@ -389,6 +367,56 @@ function createCard(item,selectable=false){
     badges.appendChild(fav);
   }
 
+  return badges;
+}
+
+function updateVisibleItemCard(item){
+  document.querySelectorAll('[data-item-id="'+item.id+'"]').forEach(card=>{
+    card.querySelectorAll('.itemName,.itemBadges').forEach(el=>el.remove());
+
+    const img=card.querySelector('img');
+    if(item.name){
+      const name=document.createElement('div');
+      name.className='itemName';
+      name.textContent=item.name;
+      if(img && img.nextSibling){
+        card.insertBefore(name,img.nextSibling);
+      }else{
+        card.appendChild(name);
+      }
+    }
+
+    const badges=buildBadges(item);
+    if(badges.children.length)card.appendChild(badges);
+  });
+}
+
+function createCard(item,selectable=false){
+  const card=document.createElement('article');
+  card.className='item';
+  card.dataset.itemId=item.id;
+  const img=document.createElement('img');
+  img.src=item.image_url;
+  img.onclick=()=>{
+    if(selectable){
+      selected[item.category]=item.id;
+      const slot=safeGet('slot-'+item.category);
+      if(slot)slot.innerHTML='<img src="'+item.image_url+'">';
+      document.querySelectorAll('[data-row="'+item.category+'"] .item').forEach(c=>c.classList.remove('active'));
+      card.classList.add('active');
+    }else{
+      openPhotoModal(item);
+    }
+  };
+  card.appendChild(img);
+
+  if(item.name){
+    const name=document.createElement('div');
+    name.className='itemName';
+    name.textContent=item.name;
+    card.appendChild(name);
+  }
+  const badges=buildBadges(item);
   if(badges.children.length)card.appendChild(badges);
   return card;
 }
