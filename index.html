@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.7</title>
+  <title>eCloset 1.7b</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.7 — detailvenster</small>
+  <small>eCloset 1.7b — detailvenster</small>
 </header>
 
 <main>
@@ -58,17 +58,6 @@
         <h2>Mijn kast</h2>
         <p id="closetSummary">Cloud laden...</p><button id="closetManageCategories" class="filterToggle">Categorieën</button>
       </div>
-    </div>
-    <div id="closetOutfitBar" class="outfitBar hidden">
-      <div class="outfitBarHead">
-        <div>
-          <h3>Nieuwe outfit</h3>
-          <p id="lockedSummary">Nog niets vastgezet</p>
-        </div>
-        <button id="clearLockedOutfit" class="light">Wissen</button>
-      </div>
-      <div id="lockedPreview" class="lockedPreview"></div>
-      <button id="saveLockedOutfit" class="saveOutfitBtn">Outfit bewaren</button>
     </div>
     <div id="closetContent"></div>
   </section>
@@ -146,6 +135,8 @@
     </div>
   </div>
 </div>
+
+<button id="floatingSaveOutfit" class="floatingSave hidden">Outfit bewaren</button>
 
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>

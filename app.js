@@ -48,18 +48,33 @@ let openFilterPanels={};
 function safeGet(id){return document.getElementById(id)}
 
 function loadCategories(){
-  const keys=['ecloset_categories_master','ecloset_categories_fix','ecloset_categories_1','ecloset_categories_v34'];
+  const keys=[
+    'ecloset_categories_master',
+    'ecloset_categories_fix',
+    'ecloset_categories_1',
+    'ecloset_categories_v34',
+    'ecloset_categories_v2'
+  ];
+
+  let best=null;
   for(const key of keys){
     try{
       const saved=localStorage.getItem(key);
-      if(saved){
-        const parsed=JSON.parse(saved);
-        localStorage.setItem('ecloset_categories_master',JSON.stringify(parsed));
-        return parsed;
+      if(!saved)continue;
+      const parsed=JSON.parse(saved);
+      if(Array.isArray(parsed) && parsed.length){
+        // Kies de eerste bestaande lijst die niet leeg is.
+        best=parsed;
+        break;
       }
     }catch(e){}
   }
-  return DEFAULT_CATEGORIES.map(c=>({...c}));
+
+  if(!best)best=DEFAULT_CATEGORIES.map(c=>({...c}));
+
+  // Vanaf nu altijd dezelfde vaste sleutel gebruiken.
+  localStorage.setItem('ecloset_categories_master',JSON.stringify(best));
+  return best;
 }
 
 function saveCategories(){
@@ -417,43 +432,16 @@ function updateLockButtons(){
     const cat=item.category||'tops';
     const isLocked=lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id);
     btn.classList.toggle('locked',isLocked);
-    btn.textContent=isLocked?'🔒':'🔓';
+    btn.textContent=isLocked?'✓':'＋';
   });
 }
 
 function renderLockedOutfitBar(){
-  const bar=document.getElementById('closetOutfitBar');
-  const preview=document.getElementById('lockedPreview');
-  const summary=document.getElementById('lockedSummary');
-  if(!bar||!preview||!summary)return;
-
-  const locked=Object.entries(lockedOutfit);
-  bar.classList.toggle('hidden',locked.length===0);
-  preview.innerHTML='';
-
-  if(!locked.length){
-    summary.textContent='Nog niets vastgezet';
-    return;
-  }
-
-  summary.textContent=locked.length+' item(s) vastgezet';
-
-  locked.forEach(([cat,item])=>{
-    const slot=document.createElement('div');
-    slot.className='lockedSlot';
-    slot.title=categoryName(cat);
-    slot.innerHTML='<img src="'+item.image_url+'" alt="'+categoryName(cat)+'">';
-    preview.appendChild(slot);
-  });
-
-  ['tops','bottoms','shoes','bags'].forEach(cat=>{
-    if(!lockedOutfit[cat]){
-      const slot=document.createElement('div');
-      slot.className='lockedSlot';
-      slot.textContent=categoryName(cat);
-      preview.appendChild(slot);
-    }
-  });
+  const btn=document.getElementById('floatingSaveOutfit');
+  if(!btn)return;
+  const count=Object.keys(lockedOutfit).length;
+  btn.classList.toggle('hidden',count===0);
+  btn.textContent=count ? 'Outfit bewaren ('+count+')' : 'Outfit bewaren';
 }
 
 function clearLockedOutfit(){
@@ -505,7 +493,7 @@ function createCard(item,selectable=false){
     const lock=document.createElement('button');
     lock.className='lockBtn';
     lock.dataset.itemId=item.id;
-    lock.textContent='🔓';
+    lock.textContent='＋';
     lock.onclick=(event)=>{
       event.stopPropagation();
       toggleLockItem(item);
@@ -526,18 +514,27 @@ function createCard(item,selectable=false){
 
 function createRow(category,selectable=false,closet=false){
   const row=document.createElement('div');
-  row.className='row '+(closet?'closetRow':'');
+  const locked=lockedOutfit[category];
+  row.className='row '+(closet?'closetRow':'')+(locked?' lockedRow':'');
   row.dataset.row=category;
-  const list=itemsFor(category);
+
+  let list=itemsFor(category);
+  if(locked){
+    list=[locked];
+  }
+
   if(!list.length){
     const e=document.createElement('div');
     e.className='empty';
     e.textContent='Nog geen foto’s';
     row.appendChild(e);
   }else{
-    list.forEach(item=>row.appendChild(createCard(item,selectable)));
+    list.forEach(item=>row.appendChild(createCard(item,selectable,closet)));
   }
-  
+
+  if(!locked){
+    row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
+  }
   return row;
 }
 
@@ -611,7 +608,7 @@ function renderCloset(){
     top.className='catTop';
 
     const left=document.createElement('div');
-    left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' zichtbaar • '+allItemsFor(cat.id).length+' totaal</div>';
+    left.innerHTML='<h2>'+cat.name+(lockedOutfit[cat.id]?' <span class="lockedLabel">vastgezet</span>':'')+'</h2><div class="catCount">'+itemsFor(cat.id).length+' zichtbaar • '+allItemsFor(cat.id).length+' totaal</div>';
 
     const actions=document.createElement('div');
     actions.className='catActionsTop';
@@ -972,6 +969,7 @@ function bindEvents(){
   if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
   if(safeGet('clearLockedOutfit'))safeGet('clearLockedOutfit').onclick=clearLockedOutfit;
   if(safeGet('saveLockedOutfit'))safeGet('saveLockedOutfit').onclick=saveLockedOutfit;
+  if(safeGet('floatingSaveOutfit'))safeGet('floatingSaveOutfit').onclick=saveLockedOutfit;
   if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
 
   if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
