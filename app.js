@@ -302,65 +302,212 @@ function updateFloatingSave(){
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-async 
-
-
-
-
-function finalCollageClass(count){
-  if(count===1)return 'c1';
-  if(count===2)return 'c2';
-  if(count===3)return 'c3';
-  if(count===4)return 'c4';
-  if(count===5)return 'c5';
-  if(count===6)return 'c6';
-  return 'cMore';
+function distanceRGB(a,b){
+  const dr=a[0]-b[0], dg=a[1]-b[1], db=a[2]-b[2];
+  return Math.sqrt(dr*dr+dg*dg+db*db);
 }
 
-function renderFinalOutfitCollage(ordered){
-  const wrap=document.getElementById('finalOutfitCollage');
-  if(!wrap)return;
+function sampleBackgroundColor(ctx,w,h){
+  const points=[
+    [2,2],[w-3,2],[2,h-3],[w-3,h-3],
+    [Math.floor(w/2),2],[Math.floor(w/2),h-3],[2,Math.floor(h/2)],[w-3,Math.floor(h/2)]
+  ];
+  let r=0,g=0,b=0,n=0;
+  points.forEach(([x,y])=>{
+    const d=ctx.getImageData(x,y,1,1).data;
+    r+=d[0];g+=d[1];b+=d[2];n++;
+  });
+  return [r/n,g/n,b/n];
+}
 
-  wrap.innerHTML='';
+function removeBackgroundFromUrl(url){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const max=900;
+      let w=img.naturalWidth||img.width;
+      let h=img.naturalHeight||img.height;
+      const scale=Math.min(1,max/Math.max(w,h));
+      w=Math.max(1,Math.round(w*scale));
+      h=Math.max(1,Math.round(h*scale));
+
+      const canvas=document.createElement('canvas');
+      canvas.width=w;
+      canvas.height=h;
+      const ctx=canvas.getContext('2d',{willReadFrequently:true});
+      ctx.drawImage(img,0,0,w,h);
+
+      const bg=sampleBackgroundColor(ctx,w,h);
+      const image=ctx.getImageData(0,0,w,h);
+      const data=image.data;
+
+      // Eenvoudige test: pixels die sterk lijken op de randkleur worden transparant.
+      // Dit is geen echte AI, maar goed genoeg om te testen of de flow werkt.
+      for(let i=0;i<data.length;i+=4){
+        const r=data[i], g=data[i+1], b=data[i+2];
+        const dist=distanceRGB([r,g,b],bg);
+        const brightness=(r+g+b)/3;
+        const neutral=Math.max(r,g,b)-Math.min(r,g,b);
+
+        if(dist<42 || (brightness>220 && neutral<38)){
+          data[i+3]=0;
+        }else if(dist<65){
+          data[i+3]=Math.max(80,Math.round((dist-42)/23*255));
+        }
+      }
+
+      ctx.putImageData(image,0,0);
+
+      // Bijsnijden rond overblijvende pixels
+      const out=ctx.getImageData(0,0,w,h).data;
+      let minX=w,minY=h,maxX=0,maxY=0,found=false;
+      for(let y=0;y<h;y++){
+        for(let x=0;x<w;x++){
+          const a=out[(y*w+x)*4+3];
+          if(a>20){
+            found=true;
+            if(x<minX)minX=x;
+            if(y<minY)minY=y;
+            if(x>maxX)maxX=x;
+            if(y>maxY)maxY=y;
+          }
+        }
+      }
+
+      if(!found){
+        resolve(url);
+        return;
+      }
+
+      const pad=20;
+      minX=Math.max(0,minX-pad);
+      minY=Math.max(0,minY-pad);
+      maxX=Math.min(w-1,maxX+pad);
+      maxY=Math.min(h-1,maxY+pad);
+
+      const cw=maxX-minX+1;
+      const ch=maxY-minY+1;
+      const crop=document.createElement('canvas');
+      crop.width=cw;
+      crop.height=ch;
+      crop.getContext('2d').drawImage(canvas,minX,minY,cw,ch,0,0,cw,ch);
+      resolve(crop.toDataURL('image/png'));
+    };
+    img.onerror=()=>reject(new Error('Afbeelding kon niet geladen worden'));
+    img.src=url;
+  });
+}
+
+
+
+
+
+
+
+
+
+
+function collageCountClass(count){
+  if(count===1)return 'count1';
+  if(count===2)return 'count2';
+  if(count===3)return 'count3';
+  if(count===4)return 'count4';
+  if(count===5)return 'count5';
+  if(count===6)return 'count6';
+  return 'countMore';
+}
+
+function testCollage(){
+  const board=document.getElementById('collagePreview');
+  if(!board)return;
+
+  const cards=[...document.querySelectorAll('.outfitPreviewCard')];
+  if(!cards.length){
+    alert('Geen outfit-items gevonden.');
+    return;
+  }
+
+  board.innerHTML='';
+  board.classList.remove('hidden');
+
+  const title=document.createElement('h3');
+  title.className='collageTitle';
+  title.textContent=(document.getElementById('outfitName')?.value || 'Mijn outfit');
+  board.appendChild(title);
 
   const grid=document.createElement('div');
-  grid.className='finalCollageGrid '+finalCollageClass(ordered.length);
+  grid.className='smartCollage '+collageCountClass(cards.length);
 
-  ordered.forEach(([cat,item])=>{
-    const tile=document.createElement('div');
-    tile.className='finalCollageTile';
+  cards.forEach(card=>{
+    const img=card.querySelector('img');
+    const cat=card.querySelector('b')?.textContent || '';
+    if(!img)return;
 
-    const img=document.createElement('img');
-    img.src=item.image_url;
-    img.alt=item.name || categoryName(cat);
+    const slot=document.createElement('div');
+    slot.className='smartSlot';
 
-    tile.appendChild(img);
-    grid.appendChild(tile);
+    const clone=document.createElement('img');
+    clone.src=img.src;
+
+    const label=document.createElement('b');
+    label.textContent=cat;
+
+    slot.append(clone,label);
+    grid.appendChild(slot);
   });
 
-  wrap.appendChild(grid);
+  board.appendChild(grid);
+  board.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+
+async function testOutfitBackgrounds(){
+  const status=document.getElementById('bgTestStatus');
+  const selected=[...document.querySelectorAll('.outfitPreviewCard.selectedForBg')];
+  const all=[...document.querySelectorAll('.outfitPreviewCard')];
+  const cards=selected.length ? selected : all;
+
+  if(!cards.length)return;
+
+  if(status){
+    status.textContent=selected.length
+      ? 'Achtergrond opnieuw testen voor '+selected.length+' geselecteerd item(s)...'
+      : 'Achtergrond testen voor alle items...';
+  }
+
+  let ok=0;
+  for(const card of cards){
+    const img=card.querySelector('img');
+    if(!img)continue;
+    try{
+      card.classList.remove('bgProcessed');
+      const processed=await removeBackgroundFromUrl(img.src);
+      img.src=processed;
+      card.classList.add('bgProcessed');
+      card.classList.remove('selectedForBg');
+      ok++;
+    }catch(e){
+      console.warn(e);
+    }
+  }
+
+  if(status){
+    status.textContent=ok
+      ? 'Test klaar. Je kan slechte items opnieuw selecteren en nog eens testen.'
+      : 'Test mislukt. Dan moeten we een sterkere methode gebruiken.';
+  }
+}
+
+
+
+function autoShowCollageOnOpen(){
+  setTimeout(()=>{
+    if(typeof testCollage==='function'){
+      try{ testCollage(); }catch(e){ console.warn(e); }
+    }
+  },80);
+}
 
 function openOutfitModal(){
   const locked=Object.entries(lockedOutfit||{});
@@ -369,20 +516,30 @@ function openOutfitModal(){
     return;
   }
 
+  const preview=document.getElementById('outfitPreview');
+  if(!preview)return;
+  preview.innerHTML='';
+
   const preferred=['tops','bottoms','dresses','jackets','shoes','bags','accessories'];
   const ordered=[
     ...preferred.filter(cat=>lockedOutfit[cat]).map(cat=>[cat,lockedOutfit[cat]]),
     ...locked.filter(([cat])=>!preferred.includes(cat))
   ];
 
-  renderFinalOutfitCollage(ordered);
+  ordered.forEach(([cat,item])=>{
+    const card=document.createElement('div');
+    card.className='outfitPreviewCard';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span><small class="bgTestSmall">Tik om te selecteren</small>';
+    card.onclick=()=>card.classList.toggle('selectedForBg');
+    preview.appendChild(card);
+  });
 
-  const outfitName=document.getElementById('outfitName');
-  const outfitNote=document.getElementById('outfitNote');
-  if(outfitName)outfitName.value='';
-  if(outfitNote)outfitNote.value='';
-
+  document.getElementById('outfitName').value='';
+  document.getElementById('outfitNote').value='';
+  const bgStatus=document.getElementById('bgTestStatus'); if(bgStatus)bgStatus.textContent='Tip: tik op één of meerdere items om alleen die opnieuw te testen.';
+  const board=document.getElementById('collagePreview'); if(board){board.classList.add('hidden');board.innerHTML='';}
   document.getElementById('outfitModal').classList.add('open');
+  autoShowCollageOnOpen();
 }
 
 function closeOutfitModal(){
@@ -1095,6 +1252,8 @@ function bindEvents(){
   if(safeGet('closeOutfitModal'))safeGet('closeOutfitModal').onclick=closeOutfitModal;
   if(safeGet('cancelOutfitModal'))safeGet('cancelOutfitModal').onclick=closeOutfitModal;
   if(safeGet('confirmSaveOutfit'))safeGet('confirmSaveOutfit').onclick=confirmSaveOutfit;
+  if(safeGet('testOutfitBackgrounds'))safeGet('testOutfitBackgrounds').onclick=testOutfitBackgrounds;
+  if(safeGet('testCollage'))safeGet('testCollage').onclick=testCollage;
   const outfitModal=document.getElementById('outfitModal');
   if(outfitModal)outfitModal.onclick=e=>{if(e.target.id==='outfitModal')closeOutfitModal()};
 }
