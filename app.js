@@ -278,7 +278,7 @@ function categoryName(id){
 
 function toggleLockItem(item){
   const cat=item.category||'tops';
-  if(lockedOutfit[cat]&&String(lockedOutfit[cat].id)===String(item.id)){
+  if(lockedOutfit[cat] && String(lockedOutfit[cat].id)===String(item.id)){
     delete lockedOutfit[cat];
   }else{
     lockedOutfit[cat]=item;
@@ -313,10 +313,11 @@ function saveLockedOutfit(){
   renderAll();
 }
 
-function createCard(item,selectable=false,closet=false,pinned=false){
+function createCard(item,selectable=false,closet=false,selectedOutfit=false){
   const card=document.createElement('article');
   card.className='item';
-  if(pinned)card.classList.add('pinnedItem');
+  if(selectedOutfit)card.classList.add('selectedForOutfit');
+  
   card.dataset.itemId=item.id;
 
   const img=document.createElement('img');
@@ -380,10 +381,10 @@ function createCard(item,selectable=false,closet=false,pinned=false){
 
   if(badges.children.length)card.appendChild(badges);
 
-  if(pinned){
+  if(selectedOutfit){
     const tag=document.createElement('span');
-    tag.className='pinnedTag';
-    tag.textContent='vastgezet';
+    tag.className='selectedTag';
+    tag.textContent='Gekozen';
     card.appendChild(tag);
   }
 
@@ -392,13 +393,14 @@ function createCard(item,selectable=false,closet=false,pinned=false){
 
 function createRow(category,selectable=false,closet=false){
   const row=document.createElement('div');
-  const locked=lockedOutfit[category];
-  row.className='row '+(closet?'closetRow ':'')+(locked?'lockedRow':'');
+  const chosen=lockedOutfit[category];
+  row.className='row '+(closet?'closetRow ':'')+(chosen?'lockedRow':'');
   row.dataset.row=category;
 
   let list=itemsFor(category);
-  if(locked){
-    list=[locked,...list.filter(item=>String(item.id)!==String(locked.id))];
+  if(chosen){
+    const chosenId=String(chosen.id);
+    list=[chosen,...list.filter(item=>String(item.id)!==chosenId)];
   }
 
   if(!list.length){
@@ -408,14 +410,15 @@ function createRow(category,selectable=false,closet=false){
     row.appendChild(e);
   }else{
     list.forEach(item=>{
-      const pinned=!!(locked&&String(item.id)===String(locked.id));
-      row.appendChild(createCard(item,selectable,closet,pinned));
+      const isChosen=!!(chosen&&String(item.id)===String(chosen.id));
+      row.appendChild(createCard(item,selectable,closet,isChosen));
     });
   }
 
   row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
   return row;
 }
+
 
 function navigate(screen){
   localStorage.setItem('ecloset_last_screen',screen);
@@ -872,6 +875,7 @@ function updateCenterCards(){
     let best=null,bestDist=Infinity;
     cards.forEach(card=>{
       if(card.classList.contains('pinnedItem'))return;
+      if(card.classList.contains('selectedForOutfit'))return;
       const r=card.getBoundingClientRect();
       const c=r.left+r.width/2;
       const dist=Math.abs(center-c);
