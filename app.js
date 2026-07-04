@@ -1280,21 +1280,35 @@ function fixCategoryButton(){
 }
 
 
+let editingOutfitDraft=null;
+let pickerMode=null;
+let pickerCategory=null;
+
 let editingOutfitId=null;
+  editingOutfitDraft=null;
 
-function openEditOutfitModal(outfitId){
-  const saved=savedOutfitsList();
-  const outfit=saved.find(o=>String(o.id)===String(outfitId));
-  if(!outfit)return;
 
-  editingOutfitId=outfit.id;
-  document.getElementById('editOutfitName').value=outfit.name||'';
-  document.getElementById('editOutfitNote').value=outfit.note||'';
+function getEditingOutfit(){
+  if(!editingOutfitDraft)return null;
+  return editingOutfitDraft;
+}
 
+function renderEditOutfitItems(){
+  const outfit=getEditingOutfit();
   const box=document.getElementById('editOutfitItems');
+  if(!outfit||!box)return;
+
   box.innerHTML='';
 
-  Object.entries(outfit.items||{}).forEach(([cat,itemId])=>{
+  const entries=Object.entries(outfit.items||{});
+  if(!entries.length){
+    const empty=document.createElement('div');
+    empty.className='empty';
+    empty.textContent='Deze outfit bevat nog geen kledingstukken.';
+    box.appendChild(empty);
+  }
+
+  entries.forEach(([cat,itemId])=>{
     const item=items.find(x=>String(x.id)===String(itemId));
     if(!item)return;
 
@@ -1303,23 +1317,148 @@ function openEditOutfitModal(outfitId){
     row.dataset.cat=cat;
     row.innerHTML='<img src="'+item.image_url+'" alt=""><div><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos kledingstuk')+'</span></div>';
 
+    const actions=document.createElement('div');
+    actions.className='rowActions';
+
+    const swap=document.createElement('button');
+    swap.textContent='Wissel';
+    swap.onclick=()=>openItemPicker('swap',cat);
+
     const remove=document.createElement('button');
     remove.textContent='Verwijder';
     remove.onclick=()=>{
-      row.remove();
+      delete outfit.items[cat];
+      renderEditOutfitItems();
+      renderEditOutfitCollage(outfit);
     };
-    row.appendChild(remove);
+
+    actions.append(swap,remove);
+    row.appendChild(actions);
     box.appendChild(row);
   });
 
   renderEditOutfitCollage(outfit);
+}
+
+function renderEditTools(){
+  const box=document.getElementById('editOutfitItems');
+  if(!box || document.getElementById('editOutfitTools'))return;
+
+  const tools=document.createElement('div');
+  tools.id='editOutfitTools';
+  tools.className='editOutfitTools';
+
+  const add=document.createElement('button');
+  add.textContent='Kledingstuk toevoegen';
+  add.onclick=()=>openItemPicker('add',null);
+
+  tools.appendChild(add);
+  box.parentNode.insertBefore(tools,box);
+}
+
+function openItemPicker(mode,category){
+  pickerMode=mode;
+  pickerCategory=category || (categories[0]?.id || 'tops');
+
+  const modal=document.getElementById('itemPickerModal');
+  const title=document.getElementById('itemPickerTitle');
+  if(title)title.textContent=mode==='swap' ? categoryName(pickerCategory)+' wisselen' : 'Kledingstuk toevoegen';
+
+  renderItemPicker();
+  if(modal)modal.classList.add('open');
+}
+
+function closeItemPicker(){
+  const modal=document.getElementById('itemPickerModal');
+  if(modal)modal.classList.remove('open');
+  pickerMode=null;
+}
+
+function renderItemPicker(){
+  const grid=document.getElementById('itemPickerGrid');
+  if(!grid)return;
+  grid.innerHTML='';
+
+  const bar=document.createElement('div');
+  bar.className='pickerCatBar';
+  categories.forEach(cat=>{
+    const b=document.createElement('button');
+    b.textContent=cat.name;
+    b.className=cat.id===pickerCategory?'active':'';
+    b.onclick=()=>{
+      pickerCategory=cat.id;
+      renderItemPicker();
+    };
+    bar.appendChild(b);
+  });
+  grid.appendChild(bar);
+
+  const list=document.createElement('div');
+  list.className='itemPickerGrid';
+
+  const outfit=getEditingOutfit();
+  const alreadyIds=new Set(Object.values(outfit?.items||{}).map(String));
+
+  items.filter(item=>(item.category||'tops')===pickerCategory).forEach(item=>{
+    const card=document.createElement('div');
+    card.className='pickerItem';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+(item.name||'Naamloos')+'</b>';
+
+    if(alreadyIds.has(String(item.id)) && pickerMode==='add'){
+      card.style.opacity='.45';
+    }else{
+      card.onclick=()=>selectPickerItem(item);
+    }
+
+    list.appendChild(card);
+  });
+
+  if(!list.children.length){
+    const empty=document.createElement('div');
+    empty.className='empty';
+    empty.textContent='Geen kledingstukken in deze categorie.';
+    list.appendChild(empty);
+  }
+
+  grid.appendChild(list);
+}
+
+function selectPickerItem(item){
+  const outfit=getEditingOutfit();
+  if(!outfit)return;
+
+  const cat=item.category||pickerCategory||'tops';
+  outfit.items=outfit.items||{};
+
+  if(pickerMode==='swap'){
+    outfit.items[pickerCategory]=item.id;
+  }else{
+    outfit.items[cat]=item.id;
+  }
+
+  closeItemPicker();
+  renderEditOutfitItems();
+  renderEditOutfitCollage(outfit);
+}
+
+function openEditOutfitModal(outfitId){
+  const saved=savedOutfitsList();
+  const outfit=saved.find(o=>String(o.id)===String(outfitId));
+  if(!outfit)return;
+
+  editingOutfitId=outfit.id;
+  editingOutfitDraft=JSON.parse(JSON.stringify(outfit));
+
+  document.getElementById('editOutfitName').value=editingOutfitDraft.name||'';
+  document.getElementById('editOutfitNote').value=editingOutfitDraft.note||'';
+
+  renderEditTools();
+  renderEditOutfitItems();
+  renderEditOutfitCollage(editingOutfitDraft);
+
   const existingHint=document.querySelector('#editOutfitModal .editHint');
   if(existingHint)existingHint.remove();
-  const hint=document.createElement('p');
-  hint.className='editHint';
-  hint.textContent='Items wisselen of toevoegen bouwen we in de volgende stap. Verwijderen kan nu al.';
-  const editBoxForHint=document.getElementById('editOutfitItems');
-  if(editBoxForHint)editBoxForHint.parentNode.insertBefore(hint,editBoxForHint);
+
   document.getElementById('editOutfitModal').classList.add('open');
 }
 
@@ -1330,24 +1469,16 @@ function closeEditOutfitModal(){
 }
 
 function saveEditedOutfit(){
-  if(!editingOutfitId)return;
+  if(!editingOutfitId || !editingOutfitDraft)return;
 
   const saved=savedOutfitsList();
   const idx=saved.findIndex(o=>String(o.id)===String(editingOutfitId));
   if(idx<0)return;
 
-  const outfit=saved[idx];
-  const kept={};
-  document.querySelectorAll('#editOutfitItems .editOutfitRow').forEach(row=>{
-    const cat=row.dataset.cat;
-    if(outfit.items && outfit.items[cat])kept[cat]=outfit.items[cat];
-  });
-
   saved[idx]={
-    ...outfit,
+    ...editingOutfitDraft,
     name:(document.getElementById('editOutfitName')?.value||'').trim() || 'Naamloze outfit',
-    note:(document.getElementById('editOutfitNote')?.value||'').trim(),
-    items:kept
+    note:(document.getElementById('editOutfitNote')?.value||'').trim()
   };
 
   localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
@@ -1435,6 +1566,10 @@ function bindEvents(){
   if(safeGet('deleteEditedOutfit'))safeGet('deleteEditedOutfit').onclick=deleteEditedOutfit;
   const editOutfitModal=document.getElementById('editOutfitModal');
   if(editOutfitModal)editOutfitModal.onclick=e=>{if(e.target.id==='editOutfitModal')closeEditOutfitModal()};
+
+  if(safeGet('closeItemPickerModal'))safeGet('closeItemPickerModal').onclick=closeItemPicker;
+  const itemPickerModal=document.getElementById('itemPickerModal');
+  if(itemPickerModal)itemPickerModal.onclick=e=>{if(e.target.id==='itemPickerModal')closeItemPicker()};
 }
 
 async function start(){

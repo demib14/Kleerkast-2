@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 2.8</title>
-  <link rel="stylesheet" href="style.css?v=28">
+  <title>eCloset 2.9</title>
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 2.8 — outfits bewerken</small>
+  <small>eCloset 2.9 — outfits bewerken</small>
 </header>
 
 <main>
@@ -197,6 +197,16 @@
   </div>
 </div>
 
+
+<div id="itemPickerModal" class="modal">
+  <div class="modalCard pickerModalCard">
+    <button class="modalClose" id="closeItemPickerModal">×</button>
+    <h2 id="itemPickerTitle">Kleding kiezen</h2>
+    <p class="modalIntro">Kies een item om toe te voegen of te wisselen.</p>
+    <div id="itemPickerGrid" class="itemPickerGrid"></div>
+  </div>
+</div>
+
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
   <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
@@ -205,6 +215,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 </body>
 </html>
