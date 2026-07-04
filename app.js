@@ -381,13 +381,6 @@ function createCard(item,selectable=false,closet=false,selectedOutfit=false){
 
   if(badges.children.length)card.appendChild(badges);
 
-  if(selectedOutfit){
-    const tag=document.createElement('span');
-    tag.className='selectedTag';
-    tag.textContent='Gekozen';
-    card.appendChild(tag);
-  }
-
   return card;
 }
 
@@ -557,7 +550,7 @@ function renderCloset(){
     top.className='catTop';
 
     const left=document.createElement('div');
-    left.innerHTML='<h2>'+cat.name+(lockedOutfit[cat.id]?' <span class="lockedLabel">vastgezet</span>':'')+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
+    left.innerHTML='<h2>'+cat.name+'</h2><div class="catCount">'+itemsFor(cat.id).length+' stuk(s)</div>';
 
     const actions=document.createElement('div');
     actions.className='catActionsTop';

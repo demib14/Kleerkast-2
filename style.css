@@ -295,3 +295,27 @@
   gap:5px;
 }
 .filterBtn.active{background:var(--brown)!important;color:white!important}
+
+/* 1.8b: subtiele selectie, geen grotere foto's */
+.item.selectedForOutfit,
+.row.lockedRow .item.selectedForOutfit,
+.row.lockedRow .item.pinnedItem,
+.row.lockedRow .item{
+  min-width:154px!important;
+  max-width:none!important;
+  transform:none!important;
+}
+.item.selectedForOutfit img,
+.row.lockedRow .item.selectedForOutfit img,
+.row.lockedRow .item.pinnedItem img,
+.row.lockedRow .item img{
+  height:186px!important;
+}
+.item.selectedForOutfit{
+  border:2px solid rgba(152,113,78,.55)!important;
+  background:#fff8ef!important;
+  box-shadow:0 14px 30px rgba(61,43,31,.14)!important;
+}
+.selectedTag,.pinnedTag,.lockedLabel{
+  display:none!important;
+}
