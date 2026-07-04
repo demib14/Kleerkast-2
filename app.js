@@ -401,19 +401,28 @@ function removeBackgroundFromUrl(url){
 
 async function testOutfitBackgrounds(){
   const status=document.getElementById('bgTestStatus');
-  const cards=[...document.querySelectorAll('.outfitPreviewCard')];
+  const selected=[...document.querySelectorAll('.outfitPreviewCard.selectedForBg')];
+  const all=[...document.querySelectorAll('.outfitPreviewCard')];
+  const cards=selected.length ? selected : all;
+
   if(!cards.length)return;
 
-  if(status)status.textContent='Achtergrond verwijderen testen...';
+  if(status){
+    status.textContent=selected.length
+      ? 'Achtergrond opnieuw testen voor '+selected.length+' geselecteerd item(s)...'
+      : 'Achtergrond testen voor alle items...';
+  }
 
   let ok=0;
   for(const card of cards){
     const img=card.querySelector('img');
     if(!img)continue;
     try{
+      card.classList.remove('bgProcessed');
       const processed=await removeBackgroundFromUrl(img.src);
       img.src=processed;
       card.classList.add('bgProcessed');
+      card.classList.remove('selectedForBg');
       ok++;
     }catch(e){
       console.warn(e);
@@ -422,7 +431,7 @@ async function testOutfitBackgrounds(){
 
   if(status){
     status.textContent=ok
-      ? 'Test klaar. Kijk of de uitsnijding mooi genoeg is voor de collage.'
+      ? 'Test klaar. Je kan slechte items opnieuw selecteren en nog eens testen.'
       : 'Test mislukt. Dan moeten we een sterkere methode gebruiken.';
   }
 }
@@ -448,7 +457,8 @@ function openOutfitModal(){
   ordered.forEach(([cat,item])=>{
     const card=document.createElement('div');
     card.className='outfitPreviewCard';
-    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span>';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span><small class="bgTestSmall">Tik om te selecteren</small>';
+    card.onclick=()=>card.classList.toggle('selectedForBg');
     preview.appendChild(card);
   });
 
