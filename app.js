@@ -1362,7 +1362,11 @@ function openItemPicker(mode,category){
 
   const modal=document.getElementById('itemPickerModal');
   const title=document.getElementById('itemPickerTitle');
-  if(title)title.textContent=mode==='swap' ? categoryName(pickerCategory)+' wisselen' : 'Kledingstuk toevoegen';
+  if(title){
+    title.textContent=mode==='swap'
+      ? categoryName(pickerCategory)+' kiezen'
+      : 'Kledingstuk toevoegen';
+  }
 
   renderItemPicker();
   if(modal)modal.classList.add('open');
@@ -1379,39 +1383,47 @@ function renderItemPicker(){
   if(!grid)return;
   grid.innerHTML='';
 
-  const bar=document.createElement('div');
-  bar.className='pickerCatBar';
-  categories.forEach(cat=>{
-    const b=document.createElement('button');
-    b.textContent=cat.name;
-    b.className=cat.id===pickerCategory?'active':'';
-    b.onclick=()=>{
-      pickerCategory=cat.id;
-      renderItemPicker();
-    };
-    bar.appendChild(b);
-  });
-  grid.appendChild(bar);
+  const outfit=getEditingOutfit();
+
+  // Bij wisselen tonen we alleen de juiste categorie.
+  // Bij toevoegen mag je wel eerst een categorie kiezen.
+  if(pickerMode==='add'){
+    const bar=document.createElement('div');
+    bar.className='pickerCatBar';
+    categories.forEach(cat=>{
+      const b=document.createElement('button');
+      b.textContent=cat.name;
+      b.className=cat.id===pickerCategory?'active':'';
+      b.onclick=()=>{
+        pickerCategory=cat.id;
+        renderItemPicker();
+      };
+      bar.appendChild(b);
+    });
+    grid.appendChild(bar);
+  }
 
   const list=document.createElement('div');
   list.className='itemPickerGrid';
 
-  const outfit=getEditingOutfit();
   const alreadyIds=new Set(Object.values(outfit?.items||{}).map(String));
 
-  items.filter(item=>(item.category||'tops')===pickerCategory).forEach(item=>{
-    const card=document.createElement('div');
-    card.className='pickerItem';
-    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+(item.name||'Naamloos')+'</b>';
+  items
+    .filter(item=>(item.category||'tops')===pickerCategory)
+    .forEach(item=>{
+      const card=document.createElement('div');
+      card.className='pickerItem';
+      card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+(item.name||'Naamloos')+'</b>';
 
-    if(alreadyIds.has(String(item.id)) && pickerMode==='add'){
-      card.style.opacity='.45';
-    }else{
-      card.onclick=()=>selectPickerItem(item);
-    }
+      const isAlready=alreadyIds.has(String(item.id));
+      if(isAlready && pickerMode==='add'){
+        card.style.opacity='.45';
+      }else{
+        card.onclick=()=>selectPickerItem(item);
+      }
 
-    list.appendChild(card);
-  });
+      list.appendChild(card);
+    });
 
   if(!list.children.length){
     const empty=document.createElement('div');

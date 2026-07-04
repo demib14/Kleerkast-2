@@ -827,3 +827,33 @@
   background:var(--brown)!important;
   color:white!important;
 }
+
+/* 2.9b wissel-picker fix */
+.pickerModalCard{
+  max-height:92vh;
+  overflow-y:auto;
+}
+#itemPickerGrid{
+  display:block!important;
+}
+.itemPickerGrid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+}
+.pickerItem{
+  min-width:0!important;
+}
+.pickerItem img{
+  height:150px!important;
+  object-fit:cover!important;
+}
+.pickerCatBar{
+  display:flex;
+  gap:7px;
+  overflow-x:auto;
+  padding:4px 0 12px;
+}
+.pickerCatBar.hidden{
+  display:none!important;
+}
