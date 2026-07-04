@@ -1018,6 +1018,8 @@ function renderOutfits(){
   window.savedOutfits=saved;
   updateHomeOutfitCount();
 
+  const summary=document.getElementById('outfitsSummary'); if(summary)summary.textContent=saved.length+' outfit'+(saved.length===1?'':'s')+' bewaard';
+
   if(!saved.length){
     const e=document.createElement('div');
     e.className='empty';
