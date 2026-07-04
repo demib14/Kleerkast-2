@@ -519,8 +519,9 @@ function createRow(category,selectable=false,closet=false){
   row.dataset.row=category;
 
   let list=itemsFor(category);
+
   if(locked){
-    list=[locked];
+    list=[locked,...list.filter(item=>String(item.id)!==String(locked.id))];
   }
 
   if(!list.length){
@@ -529,12 +530,20 @@ function createRow(category,selectable=false,closet=false){
     e.textContent='Nog geen foto’s';
     row.appendChild(e);
   }else{
-    list.forEach(item=>row.appendChild(createCard(item,selectable,closet)));
+    list.forEach((item,index)=>{
+      const card=createCard(item,selectable,closet);
+      if(locked && String(item.id)===String(locked.id)){
+        card.classList.add('pinnedItem');
+        const tag=document.createElement('span');
+        tag.className='pinnedTag';
+        tag.textContent='vastgezet';
+        card.appendChild(tag);
+      }
+      row.appendChild(card);
+    });
   }
 
-  if(!locked){
-    row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
-  }
+  row.addEventListener('scroll',()=>requestAnimationFrame(updateCenterCards));
   return row;
 }
 
