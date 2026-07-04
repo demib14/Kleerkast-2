@@ -982,14 +982,18 @@ function buildMiniCollage(outfit, className='outfitThumbCollage'){
   const wrap=document.createElement('div');
   wrap.className=className;
   const outfitItems=outfitItemsArray(outfit);
+  const missing=Array.isArray(outfit.missing)?outfit.missing:[];
+  const totalCount=outfitItems.length + missing.length;
   const grid=document.createElement('div');
-  grid.className='collageGridMini '+miniCollageClass(outfitItems.length || 1);
-  if(!outfitItems.length){
+  grid.className='collageGridMini '+miniCollageClass(totalCount || 1);
+
+  if(!outfitItems.length && !missing.length){
     const empty=document.createElement('div');
-    empty.className='collageMiniTile';
+    empty.className='collageMiniTile missingTile';
     empty.textContent='Geen items';
     grid.appendChild(empty);
   }
+
   outfitItems.forEach(item=>{
     const tile=document.createElement('div');
     tile.className='collageMiniTile';
@@ -999,6 +1003,14 @@ function buildMiniCollage(outfit, className='outfitThumbCollage'){
     tile.appendChild(img);
     grid.appendChild(tile);
   });
+
+  missing.forEach(m=>{
+    const tile=document.createElement('div');
+    tile.className='collageMiniTile missingTile';
+    tile.textContent=(m.categoryName||categoryName(m.category)||'Item')+' ontbreekt';
+    grid.appendChild(tile);
+  });
+
   wrap.appendChild(grid);
   return wrap;
 }
@@ -1033,12 +1045,12 @@ function renderOutfits(){
 
   saved.slice().reverse().forEach((outfit,index)=>{
     const card=document.createElement('article');
-    card.className='outfitCard';
+    card.className='outfitCard '+((outfit.missing&&outfit.missing.length)?'incomplete':'');
     card.appendChild(buildMiniCollage(outfit,'outfitThumbCollage'));
 
     const body=document.createElement('div');
     body.className='outfitCardBody';
-    body.innerHTML='<h3>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h3><p>'+(outfit.note?outfit.note+' • ':'')+Object.keys(outfit.items||{}).length+' items</p>';
+    body.innerHTML='<h3>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h3><p>'+(outfit.note?outfit.note+' • ':'')+Object.keys(outfit.items||{}).length+' items</p>'+((outfit.missing&&outfit.missing.length)?'<span class="incompleteBadge">'+missingText(outfit)+'</span>':'');
 
     const actions=document.createElement('div');
     actions.className='outfitCardActions';
@@ -1186,12 +1198,60 @@ async function saveModalItem(){
   }
 }
 
+
+function removeClothingFromSavedOutfits(item){
+  if(!item)return;
+
+  const saved=savedOutfitsList();
+  let changed=false;
+  const itemId=String(item.id);
+  const cat=item.category||'onbekend';
+  const catName=categoryName(cat);
+  const itemName=item.name||'Naamloos kledingstuk';
+
+  saved.forEach(outfit=>{
+    outfit.items=outfit.items||{};
+    Object.entries({...outfit.items}).forEach(([category,id])=>{
+      if(String(id)===itemId){
+        delete outfit.items[category];
+        outfit.missing=Array.isArray(outfit.missing)?outfit.missing:[];
+        const already=outfit.missing.some(m=>m.category===category);
+        if(!already){
+          outfit.missing.push({
+            category,
+            categoryName:categoryName(category)||catName,
+            itemName,
+            removedAt:new Date().toISOString()
+          });
+        }
+        changed=true;
+      }
+    });
+  });
+
+  if(changed){
+    localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
+    window.savedOutfits=saved;
+  }
+
+  return changed;
+}
+
+function missingText(outfit){
+  const missing=Array.isArray(outfit.missing)?outfit.missing:[];
+  if(!missing.length)return '';
+  return missing.map(m=>(m.categoryName||categoryName(m.category)||'Item')+' ontbreekt').join(' • ');
+}
+
 async function deleteItem(id){
   if(!confirm('Dit kledingstuk verwijderen uit de cloud?'))return;
   try{
+    const itemToDelete=items.find(x=>String(x.id)===String(id));
+    const affectedOutfits=removeClothingFromSavedOutfits(itemToDelete);
     await api('/rest/v1/clothing?id=eq.'+id,{method:'DELETE'});
     closePhotoModal();
     await loadCloud();
+    if(affectedOutfits){alert('Kledingstuk verwijderd. Eén of meerdere outfits zijn nu niet compleet.');}
   }catch(e){
     console.error(e);
     alert('Verwijderen mislukt.');
@@ -1301,6 +1361,13 @@ function renderEditOutfitItems(){
   if(!outfit||!box)return;
 
   box.innerHTML='';
+
+  if(Array.isArray(outfit.missing)&&outfit.missing.length){
+    const miss=document.createElement('div');
+    miss.className='outfitMissingList';
+    miss.textContent=missingText(outfit);
+    box.appendChild(miss);
+  }
 
   const entries=Object.entries(outfit.items||{});
   if(!entries.length){
@@ -1450,6 +1517,7 @@ function selectPickerItem(item){
     outfit.items[cat]=item.id;
   }
 
+  outfit.missing=Array.isArray(outfit.missing)?outfit.missing.filter(m=>m.category!==cat):[];
   closeItemPicker();
   renderEditOutfitItems();
   renderEditOutfitCollage(outfit);

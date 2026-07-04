@@ -921,3 +921,39 @@
     height:235px!important;
   }
 }
+
+/* 2.11 incomplete outfits */
+.incompleteBadge{
+  display:inline-block;
+  margin-top:7px;
+  border-radius:999px;
+  background:#fff0c9;
+  color:#7a5a21;
+  padding:6px 9px;
+  font-size:12px;
+  font-weight:900;
+}
+.outfitCard.incomplete .outfitThumbCollage{
+  border:2px solid rgba(175,125,35,.38)!important;
+}
+.outfitMissingList{
+  margin:10px 0 0;
+  padding:10px 12px;
+  border-radius:16px;
+  background:#fff6dc;
+  border:1px solid #ecd28e;
+  color:#7a5a21;
+  font-size:13px;
+  font-weight:800;
+}
+.missingTile{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff6dc!important;
+  color:#7a5a21;
+  font-size:12px;
+  font-weight:900;
+  text-align:center;
+  padding:8px;
+}
