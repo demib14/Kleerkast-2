@@ -319,3 +319,12 @@
 .selectedTag,.pinnedTag,.lockedLabel{
   display:none!important;
 }
+
+.closetManageBtn{
+  margin-top:10px!important;
+  background:white!important;
+  color:#6f5140!important;
+  border:1px solid var(--line)!important;
+  padding:9px 13px!important;
+  box-shadow:0 8px 18px rgba(61,43,31,.08);
+}

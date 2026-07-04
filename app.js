@@ -912,6 +912,7 @@ function bindEvents(){
   if(safeGet('drawerRefresh'))safeGet('drawerRefresh').onclick=loadCloud;
   if(safeGet('saveOutfit'))safeGet('saveOutfit').onclick=saveOutfit;
   if(safeGet('clearOutfit'))safeGet('clearOutfit').onclick=clearOutfit;
+  if(safeGet('closetManageCategories'))safeGet('closetManageCategories').onclick=()=>navigate('settings');
   if(safeGet('floatingSaveOutfit'))safeGet('floatingSaveOutfit').onclick=saveLockedOutfit;
 
   if(safeGet('addPurchase'))safeGet('addPurchase').onclick=()=>pick('purchase');
