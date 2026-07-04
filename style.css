@@ -386,3 +386,40 @@
 /* 1.9 Home tiles */
 .tile h3{font-size:27px}
 .tile p[id^="tileInfo-"]{font-weight:700;color:#6f665f}
+
+/* 2.0 outfit overzicht */
+.outfitModalCard h2{margin-right:48px}
+.modalIntro{color:var(--muted);margin:0 0 14px}
+.outfitPreview{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin:14px 0;
+}
+.outfitPreviewCard{
+  background:#fff8ef;
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:10px;
+  min-height:160px;
+}
+.outfitPreviewCard img{
+  width:100%;
+  height:130px;
+  object-fit:cover;
+  border-radius:16px;
+  display:block;
+  background:#efe4dc;
+}
+.outfitPreviewCard b{
+  display:block;
+  margin-top:7px;
+  color:#6f5140;
+  font-size:13px;
+}
+.outfitPreviewCard span{
+  display:block;
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+}

@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>eCloset 1.9</title>
-  <link rel="stylesheet" href="style.css?v=19">
+  <title>eCloset 2.0</title>
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 <header class="hero">
@@ -15,7 +15,7 @@
   </div>
   <h1>eCloset</h1>
   <p>Jouw virtuele garderobe.</p>
-  <small>eCloset 1.9 — nieuwe home</small>
+  <small>eCloset 2.0 — nieuwe home</small>
 </header>
 
 <main>
@@ -147,6 +147,28 @@
 
 <button id="floatingSaveOutfit" class="floatingSave hidden">Outfit bewaren</button>
 
+
+<div id="outfitModal" class="modal">
+  <div class="modalCard outfitModalCard">
+    <button class="modalClose" id="closeOutfitModal">×</button>
+    <h2>Outfit bewaren</h2>
+    <p class="modalIntro">Controleer je gekozen kledingstukken en geef je outfit eventueel een naam.</p>
+
+    <div id="outfitPreview" class="outfitPreview"></div>
+
+    <label class="fieldLabel">Naam outfit</label>
+    <input id="outfitName" class="textInput" placeholder="bv. Casual werkdag">
+
+    <label class="fieldLabel">Notitie</label>
+    <input id="outfitNote" class="textInput" placeholder="Optioneel">
+
+    <div class="modalActions">
+      <button id="confirmSaveOutfit">Definitief opslaan</button>
+      <button id="cancelOutfitModal" class="light">Annuleren</button>
+    </div>
+  </div>
+</div>
+
 <nav>
   <button class="nav active" data-screen="home">⌂<br>Home</button>
   <button class="nav" data-screen="closet">⌒<br>Mijn kast</button>
@@ -155,6 +177,6 @@
   <button class="nav" data-screen="purchase">☆<br>Wishlist</button>
 </nav>
 
-<script src="app.js?v=19"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

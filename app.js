@@ -300,23 +300,71 @@ function updateFloatingSave(){
   btn.textContent=count?'Outfit bewaren ('+count+')':'Outfit bewaren';
 }
 
-function saveLockedOutfit(){
-  const locked=Object.values(lockedOutfit);
+
+function openOutfitModal(){
+  const locked=Object.entries(lockedOutfit||{});
   if(!locked.length){
-    alert('Zet eerst minstens één kledingstuk vast.');
+    alert('Kies eerst minstens één kledingstuk.');
     return;
   }
+
+  const preview=document.getElementById('outfitPreview');
+  if(!preview)return;
+  preview.innerHTML='';
+
+  const preferred=['tops','bottoms','dresses','jackets','shoes','bags','accessories'];
+  const ordered=[
+    ...preferred.filter(cat=>lockedOutfit[cat]).map(cat=>[cat,lockedOutfit[cat]]),
+    ...locked.filter(([cat])=>!preferred.includes(cat))
+  ];
+
+  ordered.forEach(([cat,item])=>{
+    const card=document.createElement('div');
+    card.className='outfitPreviewCard';
+    card.innerHTML='<img src="'+item.image_url+'" alt=""><b>'+categoryName(cat)+'</b><span>'+(item.name||'Naamloos')+'</span>';
+    preview.appendChild(card);
+  });
+
+  document.getElementById('outfitName').value='';
+  document.getElementById('outfitNote').value='';
+  document.getElementById('outfitModal').classList.add('open');
+}
+
+function closeOutfitModal(){
+  const modal=document.getElementById('outfitModal');
+  if(modal)modal.classList.remove('open');
+}
+
+function confirmSaveOutfit(){
+  const locked=Object.values(lockedOutfit||{});
+  if(!locked.length){
+    closeOutfitModal();
+    alert('Kies eerst minstens één kledingstuk.');
+    return;
+  }
+
+  const name=(document.getElementById('outfitName')?.value||'').trim();
+  const note=(document.getElementById('outfitNote')?.value||'').trim();
   const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
+
   saved.push({
     id:Date.now(),
     date:new Date().toLocaleDateString('nl-BE'),
+    name:name || 'Naamloze outfit',
+    note,
     items:Object.fromEntries(Object.entries(lockedOutfit).map(([cat,item])=>[cat,item.id]))
   });
+
   localStorage.setItem('ecloset_saved_outfits',JSON.stringify(saved));
   window.savedOutfits=saved;
-  alert('Outfit bewaard');
+  closeOutfitModal();
   lockedOutfit={};
+  alert('Outfit bewaard');
   renderAll();
+}
+
+function saveLockedOutfit(){
+  openOutfitModal();
 }
 
 function createCard(item,selectable=false,closet=false,selectedOutfit=false){
@@ -680,7 +728,7 @@ function renderPurchase(){
 }
 
 function renderOutfits(){
-  const c=safeGet('savedOutfits');
+  const c=(typeof safeGet==='function') ? safeGet('savedOutfits') : document.getElementById('savedOutfits');
   if(!c)return;
   c.innerHTML='';
   const saved=JSON.parse(localStorage.getItem('ecloset_saved_outfits')||'[]');
@@ -695,10 +743,10 @@ function renderOutfits(){
   saved.slice().reverse().forEach((outfit,index)=>{
     const panel=document.createElement('div');
     panel.className='panel';
-    panel.innerHTML='<h2>Outfit '+(saved.length-index)+'</h2><p>Bewaard op '+outfit.date+'</p>';
+    panel.innerHTML='<h2>'+(outfit.name||('Outfit '+(saved.length-index)))+'</h2><p>'+(outfit.note?outfit.note+' • ':'')+'Bewaard op '+outfit.date+'</p>';
     const row=document.createElement('div');
     row.className='row compact';
-    Object.values(outfit.items).forEach(id=>{
+    Object.values(outfit.items||{}).forEach(id=>{
       const item=items.find(x=>String(x.id)===String(id));
       if(item){
         const card=createCard(item,false,false);
@@ -988,6 +1036,12 @@ function bindEvents(){
   if(safeGet('modalDelete'))safeGet('modalDelete').onclick=()=>{
     if(currentModalItem)deleteItem(currentModalItem.id);
   };
+
+  if(safeGet('closeOutfitModal'))safeGet('closeOutfitModal').onclick=closeOutfitModal;
+  if(safeGet('cancelOutfitModal'))safeGet('cancelOutfitModal').onclick=closeOutfitModal;
+  if(safeGet('confirmSaveOutfit'))safeGet('confirmSaveOutfit').onclick=confirmSaveOutfit;
+  const outfitModal=document.getElementById('outfitModal');
+  if(outfitModal)outfitModal.onclick=e=>{if(e.target.id==='outfitModal')closeOutfitModal()};
 }
 
 async function start(){
