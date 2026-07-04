@@ -399,6 +399,51 @@ function removeBackgroundFromUrl(url){
   });
 }
 
+
+function moodClassForCategory(cat,index){
+  if(cat==='tops' || cat==='dresses' || cat==='jackets')return 'mainTop';
+  if(cat==='bottoms')return 'mainBottom';
+  if(cat==='shoes')return 'shoes';
+  if(cat==='bags')return 'bag';
+  return index % 2 === 0 ? 'extra1' : 'extra2';
+}
+
+function testMoodboard(){
+  const board=document.getElementById('moodboardPreview');
+  if(!board)return;
+
+  const cards=[...document.querySelectorAll('.outfitPreviewCard')];
+  if(!cards.length){
+    alert('Geen outfit-items gevonden.');
+    return;
+  }
+
+  board.innerHTML='';
+  board.classList.remove('hidden');
+
+  cards.forEach((card,index)=>{
+    const img=card.querySelector('img');
+    const cat=card.querySelector('b')?.textContent || '';
+    if(!img)return;
+
+    const item=document.createElement('div');
+    item.className='moodItem '+moodClassForCategory(cat.toLowerCase(),index);
+
+    const clone=document.createElement('img');
+    clone.src=img.src;
+    item.appendChild(clone);
+    board.appendChild(item);
+  });
+
+  const title=document.createElement('div');
+  title.className='moodTitle';
+  title.textContent=(document.getElementById('outfitName')?.value || 'Mijn outfit');
+  board.appendChild(title);
+
+  board.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+
 async function testOutfitBackgrounds(){
   const status=document.getElementById('bgTestStatus');
   const selected=[...document.querySelectorAll('.outfitPreviewCard.selectedForBg')];
@@ -464,7 +509,8 @@ function openOutfitModal(){
 
   document.getElementById('outfitName').value='';
   document.getElementById('outfitNote').value='';
-  const bgStatus=document.getElementById('bgTestStatus'); if(bgStatus)bgStatus.textContent='';
+  const bgStatus=document.getElementById('bgTestStatus'); if(bgStatus)bgStatus.textContent='Tip: tik op één of meerdere items om alleen die opnieuw te testen.';
+  const board=document.getElementById('moodboardPreview'); if(board){board.classList.add('hidden');board.innerHTML='';}
   document.getElementById('outfitModal').classList.add('open');
 }
 
@@ -1179,6 +1225,7 @@ function bindEvents(){
   if(safeGet('cancelOutfitModal'))safeGet('cancelOutfitModal').onclick=closeOutfitModal;
   if(safeGet('confirmSaveOutfit'))safeGet('confirmSaveOutfit').onclick=confirmSaveOutfit;
   if(safeGet('testOutfitBackgrounds'))safeGet('testOutfitBackgrounds').onclick=testOutfitBackgrounds;
+  if(safeGet('testMoodboard'))safeGet('testMoodboard').onclick=testMoodboard;
   const outfitModal=document.getElementById('outfitModal');
   if(outfitModal)outfitModal.onclick=e=>{if(e.target.id==='outfitModal')closeOutfitModal()};
 }
